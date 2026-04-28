@@ -13,7 +13,7 @@ impl ExeRes {
         self.sucess+=1;
     }
     pub fn fail(&mut self){
-        self.sucess+=1;
+        self.failure+=1;
     }
 }
 
