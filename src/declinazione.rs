@@ -3,7 +3,7 @@ use std::io::Write;
 
 use rand::RngExt;
 
-use crate::exercise::Exercise;
+use crate::exercise::{ExeRes, Exercise, QUIT_COMMAND};
 
 pub enum Declinazioni{
     Prima =0,
@@ -39,9 +39,12 @@ pub struct Declinazione<'a>{
 }
 
 impl Exercise for Declinazione<'_>{
-    fn run_exercise(&self) {
+    fn run_exercise(&self) -> ExeRes{
+        let mut res = ExeRes::default();
         let mut rng = rand::rng();
 
+        let base = "ros";
+        let mut prefix = String::from(base);
         let mut user_input = String::new();
         let mut case_to_check;
         loop{
@@ -53,24 +56,41 @@ impl Exercise for Declinazione<'_>{
                 _ => unreachable!(),
             };
 
-            print!("tell the latin suffix for the I Declinazione case {}-{}: ", numero, case);
+            print!("tell the {}-{} I Declinazione for {base}{}, {base}{}: ",
+                numero,
+                case,
+                self.singular_suffixes[usize::from(Casi::Nominativo)],
+                self.singular_suffixes[usize::from(Casi::Genitivo)]);
+
             std::io::stdout().flush().unwrap();
 
             user_input.clear();
+            prefix.clear();
+            prefix.push_str(base);
             match ::std::io::stdin().read_line(&mut user_input){
                 Err(e) => println!("error reading stdin: {e}"),
                 Ok(_) => {
                     user_input.pop();
-                    match user_input.as_str() == case_to_check{
-                        true => println!("Good job"),
-                        false => println!("incorrect {}: given {}, expected {}",
-                            case, user_input, case_to_check),
+                    if user_input.as_str() == QUIT_COMMAND {
+                        break;
+                    }
+                    prefix.push_str(case_to_check);
+                    match user_input.as_str() == prefix{
+                        true => {
+                            println!("Good job");
+                            res.success();
+                        },
+                        false =>{
+                            println!("incorrect {}: given {}, expected {base}{}",
+                            case, user_input, case_to_check);
+                            res.fail();
+                        },
                     }
                 },
             }
         }
+        res
     }
-    // add code here
 }
 
 impl From<usize> for Numero {
@@ -86,10 +106,7 @@ impl From<usize> for Numero {
 
 impl From<Numero> for usize{
     fn from(value: Numero) -> Self {
-        match value {
-            Numero::__Num__Numero => unreachable!(),
-            _ => value as usize,
-        }
+        value as usize
     }
 }
 

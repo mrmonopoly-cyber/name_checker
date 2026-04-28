@@ -5,7 +5,7 @@ use std::path::Path;
 use rand::{self, RngExt};
 
 use crate::declinazione;
-use crate::exercise::Exercise;
+use crate::exercise::{ExeRes, Exercise, QUIT_COMMAND};
 
 #[derive(Debug, Clone)]
 pub struct Name {
@@ -51,18 +51,22 @@ impl DB{
         self.db.get(i)
     }
 
-    fn check_caso(si: Option<&str>, name_ref: &Name, caso: declinazione::Casi)
+    fn check_caso(si: Option<&str>, name_ref: &Name, caso: declinazione::Casi, res: &mut ExeRes)
     {
         match si
         {
             Some(s) => {
                 match s.trim().trim_end() == name_ref.latin[caso as usize]{
                     true => {
+                        res.success();
                         print!("correct {}", caso);
                         std::io::stdout().flush().unwrap();
                     },
-                    false => println!("incorrect {caso}: given {}, expected {}",
-                        s, name_ref.latin[caso as usize]),
+                    false => {
+                        res.fail();
+                        println!("incorrect {caso}: given {}, expected {}",
+                        s, name_ref.latin[caso as usize]);
+                    },
                 }
             },
             None => println!("missing input"),
@@ -96,7 +100,8 @@ impl Display for Name{
 }
 
 impl Exercise for DB{
-    fn run_exercise(&self) {
+    fn run_exercise(&self) -> ExeRes{
+        let mut res = ExeRes::default();
         let mut rng = rand::rng();
 
         let mut user_input = String::new();
@@ -113,13 +118,18 @@ impl Exercise for DB{
                 Err(e) => println!("error reading stdin: {e}"),
                 Ok(_) => {
                     user_input.pop();
+                    if user_input == QUIT_COMMAND{
+                        break;
+                    }
                     let mut split = user_input.split(',');
-                    DB::check_caso(split.next(), name_ref, declinazione::Casi::Nominativo);
+                    DB::check_caso(split.next(), name_ref, declinazione::Casi::Nominativo, &mut res);
                     print!(", ");
-                    DB::check_caso(split.next(), name_ref, declinazione::Casi::Genitivo);
+                    DB::check_caso(split.next(), name_ref, declinazione::Casi::Genitivo, &mut res);
                     println!();
                 },
             }
         }
+
+        res
     }
 }

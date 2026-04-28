@@ -11,14 +11,15 @@ use self::exercise::Exercise;
 
 fn main() {
     let input = cli::parse_cli_args();
-
-    match input.test_type{
+    let res = match input.test_type{
         cli::TestType::Lexical => create_and_run_lex_exercise(&input),
         cli::TestType::PrimaDeclinazione => PRIMA_DECLINAZIONE.run_exercise(),
-    }
+    };
+
+    println!("{res}");
 }
 
-fn create_and_run_lex_exercise(input: &cli::ProgInput)
+fn create_and_run_lex_exercise(input: &cli::ProgInput) -> exercise::ExeRes
 {
     let db = match DB::new(::std::path::Path::new(input.db_file))
     {
