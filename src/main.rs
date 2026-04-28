@@ -1,24 +1,59 @@
 mod db;
+mod declinazione;
+mod exercise;
 
-use std::io::Write;
+use clap::Parser;
 use std::process::exit;
-use rand::{self, RngExt};
 
 use db::DB;
+use self::declinazione::PRIMA_DECLINAZIONE;
+use self::exercise::Exercise;
+
+enum TestType{
+    Lexical,
+    PrimaDeclinazione,
+}
 
 struct ProgInput{
-   pub db_file: &'static str, 
+    pub db_file: &'static str, 
+    pub test_type: TestType,
 }
 
 impl Default for ProgInput{
     fn default() -> Self {
-        Self { db_file: "db_file.txt"}
+        Self { db_file: "db_file.txt", test_type: TestType::Lexical}
     }
 }
 
-fn main() {
-    let input = ProgInput::default();
+/// Simple program to greet a person
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    /// Name of the person to greet
+    #[arg(short, long)]
+    test_type: Option<String>,
+}
 
+fn main() {
+    let args = Args::parse();
+    let mut input = ProgInput::default();
+
+    if let Some(s) = args.test_type{
+        match s.as_str() {
+            "names"  => input.test_type = TestType::Lexical,
+            "I dec" => input.test_type = TestType::PrimaDeclinazione,
+            _ => input.test_type = TestType::Lexical,
+        }
+    }
+
+    match input.test_type{
+        TestType::Lexical => create_and_run_lex_exercise(&input),
+        TestType::PrimaDeclinazione => PRIMA_DECLINAZIONE.run_exercise(),
+    }
+}
+
+fn create_and_run_lex_exercise(input: &ProgInput)
+{
     let db = match DB::new(::std::path::Path::new(input.db_file))
     {
         Ok(db) => db,
@@ -27,49 +62,5 @@ fn main() {
             exit(1);
         },
     };
-
-    let mut rng = rand::rng();
-
-    let mut user_input = String::new();
-
-    loop{
-        let n = rng.random_range(0..db.len());
-        let name_ref = db.at(n).expect("invalid range");
-
-        print!("tell me the latin for of {} (use , as separator): ", name_ref.italian);
-        std::io::stdout().flush().unwrap();
-
-        user_input.clear();
-        match ::std::io::stdin().read_line(&mut user_input){
-            Err(e) => println!("error reading stdin: {e}"),
-            Ok(_) => {
-                user_input.pop();
-                let mut split = user_input.split(',');
-                check_caso(split.next(), name_ref, db::Casi::Nominativo);
-                print!(", ");
-                check_caso(split.next(), name_ref, db::Casi::Genitivo);
-                println!();
-            },
-        }
-    }
-
-}
-
-
-fn check_caso(si: Option<&str>, name_ref: &db::Name, caso: db::Casi)
-{
-    match si
-    {
-        Some(s) => {
-            match s.trim().trim_end() == name_ref.latin[caso as usize]{
-                true => {
-                    print!("correct {}", caso);
-                    std::io::stdout().flush().unwrap();
-                },
-                false => println!("incorrect {caso}: given {}, expected {}",
-                    s, name_ref.latin[caso as usize]),
-            }
-        },
-        None => println!("missing input"),
-    }
+    db.run_exercise()
 }

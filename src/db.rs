@@ -1,14 +1,11 @@
 use std::fmt::{Display};
-use std::io::{self, BufRead};
+use std::io::{self, BufRead, Write};
 use std::fs::File;
 use std::path::Path;
+use rand::{self, RngExt};
 
-#[derive(Debug, Clone, Copy)]
-pub enum Casi{
-    Nominativo = 0,
-    Genitivo = 1,
-}
-
+use crate::declinazione;
+use crate::exercise::Exercise;
 
 #[derive(Debug, Clone)]
 pub struct Name {
@@ -46,12 +43,30 @@ impl DB{
         }
         Ok(res)
     }
-    pub fn len(&self) -> usize{
+    fn len(&self) -> usize{
         self.db.len()
     }
 
-    pub fn at(&'_ self, i: usize) -> Option<&'_ Name>{
+    fn at(&'_ self, i: usize) -> Option<&'_ Name>{
         self.db.get(i)
+    }
+
+    fn check_caso(si: Option<&str>, name_ref: &Name, caso: declinazione::Casi)
+    {
+        match si
+        {
+            Some(s) => {
+                match s.trim().trim_end() == name_ref.latin[caso as usize]{
+                    true => {
+                        print!("correct {}", caso);
+                        std::io::stdout().flush().unwrap();
+                    },
+                    false => println!("incorrect {caso}: given {}, expected {}",
+                        s, name_ref.latin[caso as usize]),
+                }
+            },
+            None => println!("missing input"),
+        }
     }
 }
 
@@ -80,11 +95,31 @@ impl Display for Name{
     }
 }
 
-impl Display for Casi{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Casi::Nominativo => write!(f, "Nominativo"),
-            Casi::Genitivo => write!(f, "Genitivo"),
+impl Exercise for DB{
+    fn run_exercise(&self) {
+        let mut rng = rand::rng();
+
+        let mut user_input = String::new();
+
+        loop{
+            let n = rng.random_range(0..self.len());
+            let name_ref = self.at(n).expect("invalid range");
+
+            print!("tell me the latin for of {} (use , as separator): ", name_ref.italian);
+            std::io::stdout().flush().unwrap();
+
+            user_input.clear();
+            match ::std::io::stdin().read_line(&mut user_input){
+                Err(e) => println!("error reading stdin: {e}"),
+                Ok(_) => {
+                    user_input.pop();
+                    let mut split = user_input.split(',');
+                    DB::check_caso(split.next(), name_ref, declinazione::Casi::Nominativo);
+                    print!(", ");
+                    DB::check_caso(split.next(), name_ref, declinazione::Casi::Genitivo);
+                    println!();
+                },
+            }
         }
     }
 }
