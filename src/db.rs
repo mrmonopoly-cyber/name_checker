@@ -1,11 +1,9 @@
 use std::fmt::{Display};
-use std::io::{self, BufRead, Write};
+use std::io::{self, BufRead};
 use std::fs::File;
 use std::path::Path;
-use rand::{self, RngExt};
-
+use crate::verbs;
 use crate::declinazione;
-use crate::exercise::{ExeRes, Exercise, QUIT_COMMAND};
 
 pub enum DBError {
     InvalidLinePattern (usize),
@@ -25,7 +23,7 @@ pub struct DB{
 }
 
 impl DB{
-    pub fn new(path : &std::path::Path) -> Result<Self, DBError>
+    pub fn new(path : &str) -> Result<Self, DBError>
     {
         macro_rules! check_split {
             ($split:expr, $error: expr) => {
@@ -76,69 +74,13 @@ impl DB{
 
         Ok(res)
     }
-    fn len(&self) -> usize{
-        self.db.len()
+
+    pub fn get_rand_verb<'a>(&self) -> verbs::Paradigma<'a>{
+        todo!()
     }
 
-    fn at(&'_ self, i: usize) -> Option<&'_ Name>{
-        self.db.get(i)
-    }
-
-    fn check_caso(si: Option<&str>, name_ref: &Name, caso: declinazione::Casi, res: &mut ExeRes)
-    {
-        match si
-        {
-            Some(s) => {
-                match s.trim().trim_end() == name_ref.latin[caso as usize]{
-                    true => {
-                        res.success();
-                        print!("correct {}", caso);
-                        std::io::stdout().flush().unwrap();
-                    },
-                    false => {
-                        res.fail();
-                        println!("incorrect {caso}: given {}, expected {}",
-                        s, name_ref.latin[caso as usize]);
-                    },
-                }
-            },
-            None => println!("missing input"),
-        }
-    }
-}
-
-impl Exercise for DB{
-    fn run_exercise(&self) -> ExeRes{
-        let mut res = ExeRes::default();
-        let mut rng = rand::rng();
-
-        let mut user_input = String::new();
-
-        loop{
-            let n = rng.random_range(0..self.len());
-            let name_ref = self.at(n).expect("invalid range");
-
-            print!("tell me the latin for of {} (use , as separator): ", name_ref.italian);
-            std::io::stdout().flush().unwrap();
-
-            user_input.clear();
-            match ::std::io::stdin().read_line(&mut user_input){
-                Err(e) => println!("error reading stdin: {e}"),
-                Ok(_) => {
-                    user_input.pop();
-                    if user_input == QUIT_COMMAND{
-                        break;
-                    }
-                    let mut split = user_input.split(',');
-                    DB::check_caso(split.next(), name_ref, declinazione::Casi::Nominativo, &mut res);
-                    print!(", ");
-                    DB::check_caso(split.next(), name_ref, declinazione::Casi::Genitivo, &mut res);
-                    println!();
-                },
-            }
-        }
-
-        res
+    pub fn get_rand_name<'a>(&self) -> declinazione::Paradigma<'a>{
+        todo!()
     }
 }
 

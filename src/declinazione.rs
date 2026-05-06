@@ -1,17 +1,17 @@
 use std::fmt::Display;
-use std::io::Write;
+use std::str::FromStr;
 
-use rand::RngExt;
-
-use crate::exercise::{ExeRes, Exercise, QUIT_COMMAND};
-
+#[derive(Debug, Clone, Copy)]
+#[allow(dead_code, nonstandard_style, clippy::enum_variant_names)]
 pub enum Declinazioni{
-    Prima =0,
+    Prima,
+
+    __Num__Declinazioni
 }
 
 #[derive(Debug, Clone, Copy)]
 #[allow(dead_code, nonstandard_style, clippy::enum_variant_names)]
-enum Numero{
+pub enum Numero{
     Singolare,
     Plurale,
 
@@ -32,106 +32,104 @@ pub enum Casi{
     __Num__Casi
 }
 
-#[allow(unused)]
-pub struct Declinazione<'a>{
-    singular_suffixes: [&'a str; Casi::__Num__Casi as usize],
-    plural_suffixes: [&'a str; Casi::__Num__Casi as usize],
+#[allow(dead_code)]
+pub enum DeclinazioneError {
+    Unknown,
 }
 
-impl Exercise for Declinazione<'_>{
-    fn run_exercise(&self) -> ExeRes{
-        let mut res = ExeRes::default();
-        let mut rng = rand::rng();
+#[allow(dead_code)]
+pub struct Paradigma<'a>{
+    nominativo: &'a str,
+    genitivo: &'a str,
+}
 
-        let base = "ros";
-        let mut prefix = String::from(base);
-        let mut user_input = String::new();
-        let mut case_to_check;
-        loop{
-            let case : Casi =rng.random_range(0..Casi::__Num__Casi.into()).into();
-            let numero :Numero = rng.random_range(0..Numero::__Num__Numero.into()).into();
-            match numero{
-                Numero::Singolare => case_to_check = self.singular_suffixes[usize::from(case)],
-                Numero::Plurale => case_to_check = self.plural_suffixes[usize::from(case)],
-                _ => unreachable!(),
-            };
+#[allow(dead_code)]
+impl Paradigma<'_>
+{
+    fn get_declinazione<'a>(&self) -> Result<&'a BasicDeclinazione<'a>, DeclinazioneError>{
+        for dec in DECLINAZIONI.iter(){
+            let nom_sing = dec.numero[usize::from(Numero::Singolare)][usize::from(Casi::Nominativo)];
+            let mut valid = true;
+            let s_len = nom_sing.len();
+            let name_len = self.nominativo.len();
+            let mut nom_sing = nom_sing.chars();
+            let mut nams_nom = self.nominativo.chars();
 
-            print!("tell the {}-{} I Declinazione for {base}{}, {base}{}: ",
-                numero,
-                case,
-                self.singular_suffixes[usize::from(Casi::Nominativo)],
-                self.singular_suffixes[usize::from(Casi::Genitivo)]);
+            for idx in 0..s_len{
+                if nom_sing.nth(s_len -1 - idx) != nams_nom.nth(name_len -1 -idx){
+                    valid = false;
+                    break;
+                }
+            }
 
-            std::io::stdout().flush().unwrap();
-
-            user_input.clear();
-            prefix.clear();
-            prefix.push_str(base);
-            match ::std::io::stdin().read_line(&mut user_input){
-                Err(e) => println!("error reading stdin: {e}"),
-                Ok(_) => {
-                    user_input.pop();
-                    if user_input.as_str() == QUIT_COMMAND {
-                        break;
-                    }
-                    prefix.push_str(case_to_check);
-                    match user_input.as_str() == prefix{
-                        true => {
-                            println!("Good job");
-                            res.success();
-                        },
-                        false =>{
-                            println!("incorrect {}: given {}, expected {base}{}",
-                            case, user_input, case_to_check);
-                            res.fail();
-                        },
-                    }
-                },
+            if valid{
+                return Ok(dec);
             }
         }
-        res
+
+        Err(DeclinazioneError::Unknown)
+    }
+
+    pub fn declina(&self, caso: Casi, num: Numero) -> Result<String, DeclinazioneError>{
+        let dec = self.get_declinazione()?;
+        let mut res = match String::from_str(self.nominativo){
+            Ok(s) => s,
+            Err(_) => return Err(DeclinazioneError::Unknown),
+        };
+        res.pop();
+
+        let suffix = dec.numero[usize::from(num)][usize::from(caso)];
+        res.push_str(suffix);
+
+        Ok(res)
     }
 }
 
-impl From<usize> for Numero {
-    fn from(value: usize) -> Self {
-        match value {
-            0 => Numero::Singolare,
-            1 => Numero::Plurale,
-            _ => unreachable!(),
-            
-        }
+type Cases<'a> = [&'a str; Casi::__Num__Casi as usize];
+
+struct BasicDeclinazione<'a>{
+     numero: [Cases<'a>;2],
+}
+
+const DECLINAZIONI : [BasicDeclinazione; 1] = 
+[
+    BasicDeclinazione{
+        numero: [
+            [
+                "a",
+                "ae",
+                "ae",
+                "am",
+                "a",
+                "a",
+            ],
+            [
+                "ae",
+                "arum",
+                "is",
+                "as",
+                "ae",
+                "is",
+            ],
+        ],
+    },
+];
+
+impl From<Declinazioni> for usize{
+    fn from(val: Declinazioni) -> Self {
+        val as usize
+    }
+}
+
+impl From<Casi> for usize {
+    fn from(value: Casi) -> Self {
+        value as Self
     }
 }
 
 impl From<Numero> for usize{
     fn from(value: Numero) -> Self {
         value as usize
-    }
-}
-
-impl Display for Numero{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Numero::Singolare => write!(f, "Singolare"),
-            Numero::Plurale => write!(f, "Plurale"),
-            Numero::__Num__Numero => unreachable!(),
-        }
-    }
-    // add code here
-}
-
-impl Display for Casi{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Casi::Nominativo => write!(f, "Nominativo"),
-            Casi::Genitivo => write!(f, "Genitivo"),
-            Casi::Dativo => write!(f, "Dativo"),
-            Casi::Accusativo => write!(f, "Accusativo"),
-            Casi::Vocativo => write!(f, "Vocativo"),
-            Casi::Ablativo => write!(f, "Ablativo"),
-            _ => panic!("unreachable code"),
-        }
     }
 }
 
@@ -149,36 +147,46 @@ impl From<usize> for Casi {
     }
 }
 
-impl From<Declinazioni> for usize{
-    fn from(val: Declinazioni) -> Self {
-        val as usize
+impl From<usize> for Declinazioni{
+    fn from(value: usize) -> Self {
+        match value {
+            0 => Self::Prima,
+            _ => unreachable!(),
+        }
     }
 }
 
-impl From<Casi> for usize {
-    fn from(value: Casi) -> Self {
-        value as Self
+impl From<usize> for Numero {
+    fn from(value: usize) -> Self {
+        match value {
+            0 => Numero::Singolare,
+            1 => Numero::Plurale,
+            _ => unreachable!(),
+            
+        }
     }
 }
 
-#[allow(unused)]
-pub static PRIMA_DECLINAZIONE : Declinazione = Declinazione{
-    singular_suffixes: 
-        [
-        "a",
-        "ae",
-        "ae",
-        "am",
-        "a",
-        "a",
-        ],
-    plural_suffixes:
-        [
-        "ae",
-        "arum",
-        "is",
-        "as",
-        "ae",
-        "is",
-        ],
-};
+impl Display for Numero{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Numero::Singolare => write!(f, "Singolare"),
+            Numero::Plurale => write!(f, "Plurale"),
+            Numero::__Num__Numero => unreachable!(),
+        }
+    }
+}
+
+impl Display for Casi{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Casi::Nominativo => write!(f, "Nominativo"),
+            Casi::Genitivo => write!(f, "Genitivo"),
+            Casi::Dativo => write!(f, "Dativo"),
+            Casi::Accusativo => write!(f, "Accusativo"),
+            Casi::Vocativo => write!(f, "Vocativo"),
+            Casi::Ablativo => write!(f, "Ablativo"),
+            _ => unreachable!()
+        }
+    }
+}

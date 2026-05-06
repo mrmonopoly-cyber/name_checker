@@ -30,6 +30,7 @@ pub enum Numero{
     Plurale
 }
 
+#[allow(dead_code)]
 pub enum VerbsError{
     ConiugazioneNotFound,
     TempoNotFound,
@@ -37,10 +38,12 @@ pub enum VerbsError{
 }
 
 
+#[allow(dead_code)]
 pub struct Paradigma<'a>{
     tempi: [&'a str; 5],
 }
 
+#[allow(dead_code)]
 impl Paradigma<'_>
 {
     fn get_coniugazione(&self) -> Result<usize, VerbsError>
@@ -125,6 +128,7 @@ struct Indicativo<'a>{
     futuro_anteriore: FormaVerbaleAttiva<'a>,
 }
 
+#[allow(dead_code)]
 struct Congiuntivo<'a>{
     presente: FormaVerbaleAttiva<'a>,
     imperfetto: FormaVerbaleAttiva<'a>,
@@ -138,6 +142,7 @@ struct Imperativo<'a>{
     futuro: FormaVerbale<'a, 4>,
 }
 
+#[allow(dead_code)]
 struct Infinito<'a>{
     presente: FormaVerbale<'a, 1>,
     perfetto: FormaVerbale<'a, 1>,
@@ -218,6 +223,7 @@ const IMPERATIVO : Imperativo = Imperativo{
 
 const NOT_IMPLEMENTED : InvalidForma = InvalidForma;
 
+#[allow(dead_code)]
 const INFINITO: Infinito= Infinito{
     presente: FormaVerbale { coniugazioni: [["are"], ["ere"], ["ere"], ["ire"]] },
     perfetto: FormaVerbale { coniugazioni: [["isse"], ["isse"], ["isso"], ["isse"]]},
