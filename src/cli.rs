@@ -2,6 +2,7 @@ use clap::Parser;
 
 pub enum TestType{
     Lexical,
+    Verbs,
     PrimaDeclinazione,
 }
 
@@ -32,6 +33,7 @@ pub fn parse_cli_args() -> ProgInput{
     if let Some(s) = args.test_type{
         match s.as_str() {
             "names"  => res.test_type = TestType::Lexical,
+            "verbs" => res.test_type = TestType::Verbs,
             "I dec" => res.test_type = TestType::PrimaDeclinazione,
             _ => res.test_type = TestType::Lexical,
         }

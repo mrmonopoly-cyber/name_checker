@@ -2,6 +2,7 @@ mod db;
 mod declinazione;
 mod exercise;
 mod cli;
+mod verbs;
 
 use std::process::exit;
 
@@ -14,6 +15,7 @@ fn main() {
     let res = match input.test_type{
         cli::TestType::Lexical => create_and_run_lex_exercise(&input),
         cli::TestType::PrimaDeclinazione => PRIMA_DECLINAZIONE.run_exercise(),
+        cli::TestType::Verbs => todo!(),
     };
 
     println!("{res}");

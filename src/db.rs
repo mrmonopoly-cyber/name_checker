@@ -7,6 +7,12 @@ use rand::{self, RngExt};
 use crate::declinazione;
 use crate::exercise::{ExeRes, Exercise, QUIT_COMMAND};
 
+pub enum DBError {
+    InvalidLinePattern (usize),
+    IO (::std::io::Error),
+    
+}
+
 #[derive(Debug, Clone)]
 pub struct Name {
     pub italian: String,
@@ -19,28 +25,55 @@ pub struct DB{
 }
 
 impl DB{
-    pub fn new(path : &std::path::Path) -> Result<Self, std::io::Error>
+    pub fn new(path : &std::path::Path) -> Result<Self, DBError>
     {
+        macro_rules! check_split {
+            ($split:expr, $error: expr) => {
+                match $split{
+                    Some(s) => s,
+                    None => return $error,
+                }
+
+            };
+        }
         let mut res = Self{db: Vec::new(), it_i:0};
+        let mut italian = String::new();
+        let mut latins = String::new();
         let lines = match read_lines(path){
             Ok(l) => l,
             Err(e) => {
-                return Err(e);
+                return Err(DBError::IO(e));
             },
         };
 
-        for line in lines.map_while(Result::ok) {
-            let words : Vec<&str> = line.split(':').collect();
-            let italian = words[0].to_string();
-            let latins = words[1].to_string();
-            let mut split = latins.split(',');
-            let ele = Name{
-                italian: italian.to_string(),
-                latin: [split.next().unwrap().to_string(), split.next().unwrap().to_string()],
-            };
+        for (idx, line) in lines.map_while(Result::ok).enumerate() {
+            let error = Err(DBError::InvalidLinePattern(idx));
+            if !line.starts_with('#') && !line.is_empty() {
+                let words : Vec<&str> = line.split(':').collect();
+                if words.len() != 2 {
+                    return error;
+                }
 
-            res.db.push(ele);
+                italian.clear();
+                latins.clear();
+
+                italian.push_str(words[0]);
+                latins.push_str(words[1]);
+
+                let mut split = latins.split(',');
+
+                let lat_nom = check_split!(split.next(), error);
+                let lat_gen = check_split!(split.next(), error);
+
+                let ele = Name{
+                    italian: italian.to_string(),
+                    latin: [lat_nom.to_string(), lat_gen.to_string()],
+                };
+
+                res.db.push(ele);
+            }
         }
+
         Ok(res)
     }
     fn len(&self) -> usize{
@@ -71,31 +104,6 @@ impl DB{
             },
             None => println!("missing input"),
         }
-    }
-}
-
-fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
-where P: AsRef<Path>, {
-    let file = File::open(filename)?;
-    Ok(io::BufReader::new(file).lines())
-}
-
-impl Iterator for DB{
-    type Item = Name;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.it_i < self.db.len(){
-            let name = self.db[self.it_i].clone();
-            self.it_i+=1;
-            return Some(name);
-        }
-        None
-    }
-}
-
-impl Display for Name{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}:[{},{}]", self.italian, self.latin[0], self.latin[1])
     }
 }
 
@@ -132,4 +140,39 @@ impl Exercise for DB{
 
         res
     }
+}
+
+fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
+where P: AsRef<Path>, {
+    let file = File::open(filename)?;
+    Ok(io::BufReader::new(file).lines())
+}
+
+impl Iterator for DB{
+    type Item = Name;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.it_i < self.db.len(){
+            let name = self.db[self.it_i].clone();
+            self.it_i+=1;
+            return Some(name);
+        }
+        None
+    }
+}
+
+impl Display for Name{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}:[{},{}]", self.italian, self.latin[0], self.latin[1])
+    }
+}
+
+impl Display for DBError{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DBError::InvalidLinePattern(n) => write!(f,"invalid pattern at line {n}"),
+            DBError::IO(error) => write!(f, "{error}"),
+        }
+    }
+    // add code here
 }
