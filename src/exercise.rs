@@ -43,14 +43,14 @@ pub enum Exercise{
     __Count
 }
 
-enum Question<'a>{
-    NameMemoryLat(declinazione::Paradigma<'a>),
-    VerbMemoryLat(verbs::Paradigma<'a>),
-    NameDecLat(declinazione::Paradigma<'a>),
-    VerbDecLat(verbs::Paradigma<'a>),
+enum Question{
+    NameMemoryLat(usize),
+    VerbMemoryLat(usize),
+    NameDecLat(usize),
+    VerbDecLat(usize),
 
-    NameMemoryIt(&'a str),
-    VerbMemoryIt(&'a str),
+    NameMemoryIt(usize),
+    VerbMemoryIt(usize),
     NameDecIt(()),
     VerbDecIt(()),
 }
@@ -60,7 +60,7 @@ pub struct ExerciseCheck<'a>{
     db: Option<&'a DB>,
     checkable : [Exercise; 4],
     amount_to_check: usize,
-    q_type: Option<Question<'a>>,
+    q_type: Option<Question>,
 }
 
 impl<'a> ExerciseCheck<'a>{
@@ -86,6 +86,7 @@ impl<'a> ExerciseCheck<'a>{
         let mut question = None;
         let dir_trad =DirectionTraduction::from(rng.random_range(0..DirectionTraduction::__Count as usize)); 
         let con_dec_to_ask;
+        buffer.clear();
 
         match self.checkable[q_type]{
             Exercise::Lexical((list, len)) => {
@@ -110,14 +111,14 @@ impl<'a> ExerciseCheck<'a>{
                             let dec = declinazione::Declinazioni::from(con_dec_to_ask);
                             match dir_trad {
                                 DirectionTraduction::ItalianoLatino => {
-                                    let name= db.get_rand_name_it(dec);
+                                    let (idx, name) = db.get_rand_name_it(dec);
                                     let _ = write!(buffer, "{}", name);
-                                    question = Some(Question::NameMemoryIt(name))
+                                    question = Some(Question::NameMemoryIt(idx))
                                 },
                                 DirectionTraduction::LatinoItaliano => {
-                                    let paradigma = db.get_rand_name_lat(dec);
+                                    let (idx, paradigma) = db.get_rand_name_lat(dec);
                                     let _ = write!(buffer, "{}", paradigma);
-                                    question = Some(Question::NameMemoryLat(paradigma))
+                                    question = Some(Question::NameMemoryLat(idx))
                                 },
                                 DirectionTraduction::__Count => unreachable!(),
                             }
@@ -126,14 +127,14 @@ impl<'a> ExerciseCheck<'a>{
                             let con = verbs::Coniugazione::from(con_dec_to_ask);
                             match dir_trad {
                                 DirectionTraduction::ItalianoLatino => {
-                                    let verb = db.get_rand_verb_it(con);
+                                    let (idx, verb) = db.get_rand_verb_it(con);
                                     let _ = write!(buffer, "{}", verb);
-                                    question = Some(Question::VerbMemoryIt(verb))
+                                    question = Some(Question::VerbMemoryIt(idx))
                                 },
                                 DirectionTraduction::LatinoItaliano => {
-                                    let paradigma = db.get_rand_verb_lat(con);
+                                    let (idx, paradigma) = db.get_rand_verb_lat(con);
                                     let _ = write!(buffer, "{}", paradigma);
-                                    question = Some(Question::VerbMemoryLat(paradigma))
+                                    question = Some(Question::VerbMemoryLat(idx))
                                 },
                                 DirectionTraduction::__Count => unreachable!(),
                             }
@@ -155,6 +156,61 @@ impl<'a> ExerciseCheck<'a>{
     }
 
     pub fn answer(&self, answer: &str) -> bool{
+        fn missing_input(){
+            println!("missing input");
+            let _ =std::io::Write::flush(&mut ::std::io::stdout());
+        }
+
+        fn good_job() -> bool{
+            println!("good job");
+            let _ =std::io::Write::flush(&mut ::std::io::stdout());
+            true
+        }
+
+        fn incorrect_answer(given: &str, expected: &str) {
+            println!("error: given {}, expected: {}", given, expected);
+            let _ =std::io::Write::flush(&mut ::std::io::stdout());
+        }
+
+        if let Some(db) = self.db && let Some(question) = &self.q_type{
+            match question {
+                Question::NameMemoryLat(id) => {
+                    let correct_it = db.get_name(*id);
+                    if let Some(correct_it) = correct_it{
+                        match correct_it.italian == answer{
+                            true => return good_job(),
+                            false => incorrect_answer(answer, &correct_it.italian),
+                        }
+                    }
+                },
+                Question::VerbMemoryLat(_) => (),
+                Question::NameDecLat(_) => (),
+                Question::VerbDecLat(_) => (),
+                Question::NameMemoryIt(id) => {
+                    if let Some(name) = db.get_name(*id){
+                        let mut split = answer.split(",");
+                        let nominativo = split.next();
+                        let genitivo = split.next();
+
+                        if let Some(nominativo) = nominativo &&  let Some(genitivo) = genitivo{
+                            match nominativo == name.latin[0] && genitivo == name.latin[1]{
+                                true => return good_job(),
+                                false =>incorrect_answer(
+                                    &format!("{},{}", nominativo, genitivo), 
+                                    &format!("{},{}", name.latin[0], name.latin[1])),
+                            }
+                        }
+                        else{
+                            missing_input();
+                        }
+                    }
+                },
+                Question::VerbMemoryIt(_) => (),
+                Question::NameDecIt(_) => (),
+                Question::VerbDecIt(_) => (),
+            }
+        }
+        
         false
     }
 }
