@@ -1,5 +1,7 @@
 use std::fmt::Display;
+use crate::common::Numero;
 
+#[derive(Clone, Copy)]
 pub enum Modo {
     Indicativo,
     Congiuntivo,
@@ -11,14 +13,16 @@ pub enum Modo {
 }
 
 
-#[derive(PartialEq)]
+#[derive(Clone, Copy,PartialEq)]
 pub enum Tempo{
     Presente,
     Imperfetto,
     Perfetto,
     Piucheperfetto,
     Futuro,
-    FuturoAnteriore
+    FuturoAnteriore,
+
+    __Count
 }
 
 #[derive(Clone, Copy)]
@@ -31,15 +35,13 @@ pub enum Coniugazione{
     __Count
 }
 
+#[derive(Clone, Copy)]
 pub enum Persona{
     Prima,
     Seconda,
-    Terza
-}
+    Terza,
 
-pub enum Numero{
-    Singolare,
-    Plurale
+    __Count
 }
 
 #[allow(dead_code)]
@@ -51,6 +53,7 @@ pub enum VerbsError{
 
 
 #[allow(dead_code)]
+#[derive(Default)]
 pub struct Paradigma<'a>{
     tempi: [&'a str; 5],
 }
@@ -105,7 +108,7 @@ impl<'a> Paradigma<'a>
 
 
 
-    pub fn declina_verbo(&self, modo: Modo, tempo: Tempo, persona: Persona, numero: Numero)
+    pub fn coniuga_verbo(&self, modo: Modo, tempo: Tempo, persona: Persona, numero: Numero)
         -> Result<String, VerbsError>
     {
         let mut res = String::new();
@@ -256,12 +259,6 @@ const FORME_VERBALI : [&dyn InterfacciaVerbale; Modo::__Modo_count as usize] = [
     &IMPERATIVO,
 ];
 
-impl From<Tempo> for usize{
-    fn from(value: Tempo) -> Self {
-        value as usize
-    }
-}
-
 impl From<Tempo> for i32{
     fn from(value: Tempo) -> Self {
         value as i32 
@@ -274,16 +271,106 @@ impl From<Persona> for usize{
     }
 }
 
-impl From<Numero> for usize{
-    fn from(value: Numero) -> Self {
-        value as usize
-    }
-}
-
 impl From<Modo> for usize{
     fn from(value: Modo) -> Self {
         value as usize
     }
+}
+
+impl From<Tempo> for usize{
+    fn from(value: Tempo) -> Self {
+        value as usize
+    }
+}
+
+impl From<usize> for Modo{
+    fn from(value: usize) -> Self {
+        match value{
+            0 => Self::Indicativo,
+            1 => Self::Congiuntivo,
+            2 => Self::Imperativo,
+            3 => Self::Infinito,
+            _ => unreachable!()
+        }
+    }
+}
+
+impl From<usize> for Tempo{
+    fn from(value: usize) -> Self {
+        match value{
+            0 => Tempo::Presente,
+            1 => Tempo::Imperfetto,
+            2 => Tempo::Perfetto,
+            3 => Tempo::Piucheperfetto,
+            4 => Tempo::Futuro,
+            5 => Tempo::FuturoAnteriore,
+            _ => unreachable!(),
+        }
+    }
+}
+
+impl From<usize> for Persona{
+    fn from(value: usize) -> Self {
+        match value{
+            0 => Persona::Prima,
+            1 => Persona::Seconda,
+            2 => Persona::Terza,
+            3 => Persona::__Count,
+            _ => unreachable!(),
+        }
+    }
+    // add code here
+}
+
+impl Display for Modo{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self {
+            Modo::Indicativo => "Indicativo",
+            Modo::Congiuntivo => "Congiuntivo",
+            Modo::Imperativo => "Imperativo",
+            Modo::Infinito => "Infinito",
+            Modo::__Modo_count => unreachable!(),
+        })
+    }
+    // add code here
+}
+
+impl Display for Tempo{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self {
+            Tempo::Presente => "Presente",
+            Tempo::Imperfetto => "Imperfetto",
+            Tempo::Perfetto => "Perfetto",
+            Tempo::Piucheperfetto => "Piucheperfetto",
+            Tempo::Futuro => "Futuro",
+            Tempo::FuturoAnteriore => "FuturoAnteriore",
+            Tempo::__Count => unreachable!(),
+        })
+    }
+    // add code here
+}
+
+impl Display for Persona{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self {
+            Persona::Prima => "Prima",
+            Persona::Seconda => "Seconda",
+            Persona::Terza => "Terza",
+            Persona::__Count => unreachable!(),
+        })
+    }
+    // add code here
+}
+
+impl Display for VerbsError{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self {
+            VerbsError::ConiugazioneNotFound => "ConiugazioneNotFound",
+            VerbsError::TempoNotFound => "TempoNotFound",
+            VerbsError::ImpossibleRequest => "ImpossibleRequest",
+        })
+    }
+    // add code here
 }
 
 fn check_coniugazione<'b, const N: usize>(
@@ -317,6 +404,7 @@ impl InterfacciaVerbale for Indicativo<'_>{
             Tempo::Piucheperfetto => &INDICATIVO.piucheperfetto,
             Tempo::Futuro => &INDICATIVO.futuro,
             Tempo::FuturoAnteriore => &INDICATIVO.futuro_anteriore,
+            Tempo::__Count => unreachable!(),
         };
 
         check_coniugazione(tempo_ref, coniugazione, persona, numero)
@@ -367,24 +455,23 @@ impl Display for Paradigma<'_>{
     // add code here
 }
 
+impl From<Coniugazione> for usize{
+    fn from(value: Coniugazione) -> Self {
+        value as Self
+    }
+}
+
 impl From<usize> for Coniugazione{
     fn from(value: usize) -> Self {
         match value {
-            0 => Coniugazione::I,
-            1 => Coniugazione::II,
-            2 => Coniugazione::III,
-            3 => Coniugazione::IV,
-            4 => Coniugazione::__Count,
+            1 => Coniugazione::I,
+            2 => Coniugazione::II,
+            3 => Coniugazione::III,
+            4 => Coniugazione::IV,
+            5 => Coniugazione::__Count,
 
             _ => unreachable!()
         }
-    }
-    // add code here
-}
-
-impl Default for Paradigma<'_>{
-    fn default() -> Self {
-        Self { tempi: ["","","","",""] }
     }
     // add code here
 }

@@ -27,9 +27,21 @@ pub struct Verbs{
 
 #[derive(Default)]
 pub struct DB{
-    db_names: Vec::<Name>,
-    db_verbs: Vec::<Verbs>,
-    it_i: usize,
+    db_names: [Vec::<Name>; declinazione::Declinazioni::__Count as usize],
+    db_verbs: [Vec::<Verbs>; verbs::Coniugazione::__Count as usize],
+}
+
+#[derive(Clone, Copy, Default)]
+pub struct Id{
+    cat: usize,
+    idx: usize,
+}
+
+impl Id {
+    fn new(cat: usize, idx: usize) -> Self{
+        Self { cat, idx }
+    }
+    
 }
 
 impl DB{
@@ -77,61 +89,86 @@ impl DB{
                     latin: [lat_nom.to_string(), lat_gen.to_string()],
                 };
 
-                self.db_names.push(ele);
+                let dec =declinazione::Paradigma::new(&ele.latin[0], &ele.latin[1])
+                    .get_declinazione();
+                let (num, _) = match dec{
+                    Ok(d) => d,
+                    Err(e) => {
+                        println!("error finding declinazione of {ele}: {e}");
+                        continue;
+                    },
+                };
+
+                self.db_names[num].push(ele);
             }
         }
         Ok(())
     }
 
-    pub fn get_name(&self, id: usize) -> Option<&Name> {
-        self.db_names.get(id)
+    pub fn get_name(&self, id: Id) -> Option<&Name> {
+        self.db_names[id.cat].get(id.idx)
     }
 
-    pub fn get_verb(&self, id: usize) -> Option<&Verbs> {
-        self.db_verbs.get(id)
+    pub fn get_verb(&self, id: Id) -> Option<&Verbs> {
+        self.db_verbs[id.cat].get(id.idx)
     }
 
-    pub fn get_rand_verb_lat<'a>(&'a self, _con: verbs::Coniugazione)
-        -> (usize,verbs::Paradigma<'a>){
+    pub fn get_rand_verb_lat<'a>(&'a self, con: verbs::Coniugazione) -> (Id,verbs::Paradigma<'a>){
         if self.db_verbs.is_empty() {
-            (0,verbs::Paradigma::default())
+            (Id::default(), verbs::Paradigma::default())
         }else{
-            let verb_idx = rng().random_range(0..self.db_verbs.len());
-            let verb = &self.db_verbs[verb_idx];
-            (verb_idx, verbs::Paradigma::new(&verb.latin))
+            let con = usize::from(con);
+            let con_table = &self.db_verbs[con];
+            if con_table.is_empty(){
+                return (Id::default(), verbs::Paradigma::default());
+            }
+            let verb_idx = rng().random_range(0..con_table.len());
+            let verb = &con_table[verb_idx];
+            let id = Id::new(con, verb_idx);
+            let paradigma = verbs::Paradigma::new(&verb.latin);
+
+            (id, paradigma)
         }
 
     }
 
-    pub fn get_rand_name_lat<'a>(&'a self, _dec: declinazione::Declinazioni) ->
-        (usize, declinazione::Paradigma<'a>){
+    pub fn get_rand_name_lat<'a>(&'a self, dec: declinazione::Declinazioni) -> 
+        (Id, declinazione::Paradigma<'a>){
             if self.db_names.is_empty(){
-                (0,declinazione::Paradigma::default())
+                (Id::default(),declinazione::Paradigma::default())
             }else{
-                let name_idx = rng().random_range(0..self.db_names.len());
-                let name = &self.db_names[name_idx];
-                (name_idx, declinazione::Paradigma::new(&name.latin[0], &name.latin[1]))
+                let dec = usize::from(dec);
+                let dec_table = &self.db_names[dec];
+                if dec_table.is_empty() {
+                    return (Id::default(),declinazione::Paradigma::default());
+                }
+                let name_idx = rng().random_range(0..dec_table.len());
+                let name = &dec_table[name_idx];
+                let id = Id::new(dec, name_idx);
+                let paradigma = declinazione::Paradigma::new(&name.latin[0], &name.latin[1]);
+
+                (id,paradigma)
             }
     }
 
-    pub fn get_rand_verb_it(&self, _con: verbs::Coniugazione) -> (usize, &str){
+    pub fn get_rand_verb_it(&self, con: verbs::Coniugazione) -> (Id, &str){
         if self.db_verbs.is_empty() {
-            (0,"")
+            (Id::default(),"")
         }else{
             let verb_idx = rng().random_range(0..self.db_verbs.len());
-            let verb = &self.db_verbs[verb_idx];
-            (verb_idx, &verb.italian)
+            let verb = &self.db_verbs[usize::from(con)][verb_idx];
+            (Id::new(usize::from(con), verb_idx), &verb.italian)
         }
     }
 
-    pub fn get_rand_name_it(&self, _dec: declinazione::Declinazioni) -> (usize, &str){
+    pub fn get_rand_name_it(&self, dec: declinazione::Declinazioni) -> (Id, &str){
         if self.db_names.is_empty(){
-            (0, "")
+            (Id::default(), "")
         }
         else{
             let name_idx = rng().random_range(0..self.db_names.len());
-            let name = &self.db_names[name_idx];
-            (name_idx, &name.italian)
+            let name = &self.db_names[usize::from(dec)][name_idx];
+            (Id::new(usize::from(dec), name_idx), &name.italian)
         }
     }
 }
@@ -140,19 +177,6 @@ fn read_lines<P>(filename: P) -> io::Result<io::Lines<io::BufReader<File>>>
 where P: AsRef<Path>, {
     let file = File::open(filename)?;
     Ok(io::BufReader::new(file).lines())
-}
-
-impl Iterator for DB{
-    type Item = Name;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.it_i < self.db_names.len(){
-            let name = self.db_names[self.it_i].clone();
-            self.it_i+=1;
-            return Some(name);
-        }
-        None
-    }
 }
 
 impl Display for Name{

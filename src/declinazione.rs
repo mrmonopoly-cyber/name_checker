@@ -1,21 +1,16 @@
 use std::fmt::Display;
 use std::str::FromStr;
+use crate::common::Numero;
 
 #[derive(Debug, Clone, Copy)]
 #[allow(dead_code, nonstandard_style, clippy::enum_variant_names)]
 pub enum Declinazioni{
     Prima,
+    Seconda,
+    Terza,
+    Quarta,
 
-    __Num__Declinazioni
-}
-
-#[derive(Debug, Clone, Copy)]
-#[allow(dead_code, nonstandard_style, clippy::enum_variant_names)]
-pub enum Numero{
-    Singolare,
-    Plurale,
-
-    __Num__Numero
+    __Count
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -51,8 +46,8 @@ impl<'b> Paradigma<'b>
         Paradigma { nominativo, genitivo }
     }
 
-    fn get_declinazione<'a>(&self) -> Result<&'a BasicDeclinazione<'a>, DeclinazioneError>{
-        for dec in DECLINAZIONI.iter(){
+    pub fn get_declinazione<'a>(&self) -> Result<(usize, &'a BasicDeclinazione<'a>), DeclinazioneError>{
+        for (num, dec) in DECLINAZIONI.iter().enumerate(){
             let nom_sing = dec.numero[usize::from(Numero::Singolare)][usize::from(Casi::Nominativo)];
             let mut valid = true;
             let s_len = nom_sing.len();
@@ -68,7 +63,7 @@ impl<'b> Paradigma<'b>
             }
 
             if valid{
-                return Ok(dec);
+                return Ok((num, dec));
             }
         }
 
@@ -76,7 +71,7 @@ impl<'b> Paradigma<'b>
     }
 
     pub fn declina(&self, caso: Casi, num: Numero) -> Result<String, DeclinazioneError>{
-        let dec = self.get_declinazione()?;
+        let (_, dec) = self.get_declinazione()?;
         let mut res = match String::from_str(self.nominativo){
             Ok(s) => s,
             Err(_) => return Err(DeclinazioneError::Unknown),
@@ -92,7 +87,7 @@ impl<'b> Paradigma<'b>
 
 type Cases<'a> = [&'a str; Casi::__Num__Casi as usize];
 
-struct BasicDeclinazione<'a>{
+pub struct BasicDeclinazione<'a>{
      numero: [Cases<'a>;2],
 }
 
@@ -132,12 +127,6 @@ impl From<Casi> for usize {
     }
 }
 
-impl From<Numero> for usize{
-    fn from(value: Numero) -> Self {
-        value as usize
-    }
-}
-
 impl From<usize> for Casi {
     fn from(value: usize) -> Self {
         match value {
@@ -155,30 +144,12 @@ impl From<usize> for Casi {
 impl From<usize> for Declinazioni{
     fn from(value: usize) -> Self {
         match value {
-            0 => Self::Prima,
-            1 => Self::__Num__Declinazioni,
+            1 => Self::Prima,
+            2 => Self::Seconda,
+            3 => Self::Terza,
+            4 => Self::Quarta,
+            5 => Self::__Count,
             _ => unreachable!(),
-        }
-    }
-}
-
-impl From<usize> for Numero {
-    fn from(value: usize) -> Self {
-        match value {
-            0 => Numero::Singolare,
-            1 => Numero::Plurale,
-            _ => unreachable!(),
-            
-        }
-    }
-}
-
-impl Display for Numero{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Numero::Singolare => write!(f, "Singolare"),
-            Numero::Plurale => write!(f, "Plurale"),
-            Numero::__Num__Numero => unreachable!(),
         }
     }
 }
@@ -200,6 +171,27 @@ impl Display for Casi{
 impl Display for Paradigma<'_>{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{},{}", self.nominativo, self.genitivo)
+    }
+    // add code here
+}
+
+impl Display for DeclinazioneError{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self{
+            DeclinazioneError::Unknown => write!(f, "Unknown"),
+        }
+    }
+}
+
+impl Display for Declinazioni{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self{
+            Declinazioni::Prima => "Prima",
+            Declinazioni::Seconda=> "Seconda",
+            Declinazioni::Terza=> "Terza",
+            Declinazioni::Quarta=> "Quarta",
+            Declinazioni::__Count=> unreachable!(),
+        })
     }
     // add code here
 }

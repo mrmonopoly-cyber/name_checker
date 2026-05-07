@@ -50,7 +50,7 @@ pub fn parse_cli_args(exer: &mut ExerciseCheck, db_ref: &mut DB) -> Result<(), S
 
     if let Some(dec_list) = args.declinazioni{
         for dec in dec_list{
-            if dec < usize::from(Declinazione::__Count){
+            if dec > 0 && dec < usize::from(Declinazioni::__Count){
                 declinazioni.0[declinazioni.1] = Declinazioni::from(dec);
                 declinazioni.1+=1;
             }
@@ -59,7 +59,7 @@ pub fn parse_cli_args(exer: &mut ExerciseCheck, db_ref: &mut DB) -> Result<(), S
 
     if let Some(con_list) = args.conniugazini{
         for con in con_list {
-            if con < usize::from(Declinazione::__Count){
+            if con > 0 && con < usize::from(Declinazione::__Count){
                 coniugazioni.0[coniugazioni.1] = Coniugazione::from(con);
                 coniugazioni.1+=1;
             }

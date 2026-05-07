@@ -1,11 +1,13 @@
 use std::fmt::Write;
 use rand::RngExt;
-
-use crate::verbs::Coniugazione;
-use crate::{declinazione, verbs};
-use crate::declinazione::{Declinazioni};
-use crate::DB;
 use std::fmt::Display;
+
+use crate::db::Id;
+use crate::verbs::{Coniugazione, Modo, Persona, Tempo};
+use crate::{declinazione, verbs};
+use crate::declinazione::{Casi, Declinazioni, Paradigma};
+use crate::DB;
+use crate::common::Numero;
 
 pub const QUIT_COMMAND : &str = "QUIT";
 
@@ -39,20 +41,17 @@ pub enum Exercise{
     DeclinaName((Option<[Declinazioni; 4]>, usize)),
     ConiugaVerb((Option<[Coniugazione; 4]>, usize)),
 
-    #[allow(nonstandard_style)]
     __Count
 }
 
 enum Question{
-    NameMemoryLat(usize),
-    VerbMemoryLat(usize),
-    NameDecLat(usize),
-    VerbDecLat(usize),
+    NameMemoryLat(Id),
+    VerbMemoryLat(Id),
+    NameDecLat(Id, Casi, Numero),
+    VerbDecLat(Id, Modo, Tempo, Persona, Numero),
 
-    NameMemoryIt(usize),
-    VerbMemoryIt(usize),
-    NameDecIt(usize),
-    VerbDecIt(usize),
+    NameMemoryIt(Id),
+    VerbMemoryIt(Id),
 }
 
 #[derive(Default)]
@@ -83,10 +82,18 @@ impl<'a> ExerciseCheck<'a>{
         use rand;
         let mut rng = rand::rng();
         let q_type = rng.random_range(0..self.amount_to_check);
-        let mut question = None;
+        let question;
         let dir_trad =DirectionTraduction::from(rng.random_range(0..DirectionTraduction::__Count as usize)); 
         let con_dec_to_ask;
         buffer.clear();
+
+        let db = match self.db{
+            Some(db) => db,
+            None => {
+                println!("no db");
+                return;
+            },
+        };
 
         match self.checkable[q_type]{
             Exercise::Lexical((list, len)) => {
@@ -105,51 +112,75 @@ impl<'a> ExerciseCheck<'a>{
                     },
                     DirectionTraduction::__Count => unreachable!(),
                 }
-                if let Some(db) = &self.db{
-                    match l_type{
-                        LexicalType::Names => {
-                            let dec = declinazione::Declinazioni::from(con_dec_to_ask);
-                            match dir_trad {
-                                DirectionTraduction::ItalianoLatino => {
-                                    let (idx, name) = db.get_rand_name_it(dec);
-                                    let _ = write!(buffer, "{}", name);
-                                    question = Some(Question::NameMemoryIt(idx))
-                                },
-                                DirectionTraduction::LatinoItaliano => {
-                                    let (idx, paradigma) = db.get_rand_name_lat(dec);
-                                    let _ = write!(buffer, "{}", paradigma);
-                                    question = Some(Question::NameMemoryLat(idx))
-                                },
-                                DirectionTraduction::__Count => unreachable!(),
-                            }
+                match l_type{
+                    LexicalType::Names => {
+                        let dec = declinazione::Declinazioni::from(con_dec_to_ask);
+                        match dir_trad {
+                            DirectionTraduction::ItalianoLatino => {
+                                let (idx, name) = db.get_rand_name_it(dec);
+                                let _ = write!(buffer, "{}", name);
+                                question = Some(Question::NameMemoryIt(idx))
+                            },
+                            DirectionTraduction::LatinoItaliano => {
+                                let (idx, paradigma) = db.get_rand_name_lat(dec);
+                                let _ = write!(buffer, "{}", paradigma);
+                                question = Some(Question::NameMemoryLat(idx))
+                            },
+                            DirectionTraduction::__Count => unreachable!(),
                         }
-                        LexicalType::Verbs => {
-                            let con = verbs::Coniugazione::from(con_dec_to_ask);
-                            match dir_trad {
-                                DirectionTraduction::ItalianoLatino => {
-                                    let (idx, verb) = db.get_rand_verb_it(con);
-                                    let _ = write!(buffer, "{}", verb);
-                                    question = Some(Question::VerbMemoryIt(idx))
-                                },
-                                DirectionTraduction::LatinoItaliano => {
-                                    let (idx, paradigma) = db.get_rand_verb_lat(con);
-                                    let _ = write!(buffer, "{}", paradigma);
-                                    question = Some(Question::VerbMemoryLat(idx))
-                                },
-                                DirectionTraduction::__Count => unreachable!(),
-                            }
-                        },
                     }
+                    LexicalType::Verbs => {
+                        let con = verbs::Coniugazione::from(con_dec_to_ask);
+                        match dir_trad {
+                            DirectionTraduction::ItalianoLatino => {
+                                let (idx, verb) = db.get_rand_verb_it(con);
+                                let _ = write!(buffer, "{}", verb);
+                                question = Some(Question::VerbMemoryIt(idx))
+                            },
+                            DirectionTraduction::LatinoItaliano => {
+                                let (idx, paradigma) = db.get_rand_verb_lat(con);
+                                let _ = write!(buffer, "{}", paradigma);
+                                question = Some(Question::VerbMemoryLat(idx))
+                            },
+                            DirectionTraduction::__Count => unreachable!(),
+                        }
+                    },
+                }
 
-                    let _ = write!(buffer, ": ");
-                }
-                else{
-                    println!("no db")
-                }
+                let _ = write!(buffer, ": ");
             },
-            Exercise::DeclinaName(_) => todo!(),
-            Exercise::ConiugaVerb(_) => todo!(),
+            Exercise::DeclinaName((Some(list), len)) => {
+                let idx = rng.random_range(0..len);
+                let dec_to_test = match list.get(idx){
+                    Some(dec) => *dec,
+                    None => unreachable!("{idx} >= {len}"),
+                };
+                let caso = Casi::from(rng.random_range(0..usize::from(Casi::__Num__Casi)));
+                let numero = Numero::from(rng.random_range(0..usize::from(Numero::__Num__Numero)));
+                let (idx,name) = db.get_rand_name_lat(dec_to_test);
+
+                let _ = write!(buffer, "dimmi il {caso} {numero} di {name}: ");
+
+                question = Some(Question::NameDecLat(idx, caso, numero));
+            },
+            Exercise::ConiugaVerb((Some(list), len)) => {
+                let idx = rng.random_range(0..len);
+                let dec_to_test = match list.get(idx){
+                    Some(dec) => *dec,
+                    None => unreachable!("{idx} >= {len}"),
+                };
+                let modo = Modo::from(rng.random_range(0..usize::from(Modo::__Modo_count)));
+                let tempo = Tempo::from(rng.random_range(0..usize::from(Tempo::__Count)));
+                let persona = Persona::from(rng.random_range(0..usize::from(Persona::__Count)));
+                let numero = Numero::from(rng.random_range(0..usize::from(Numero::__Num__Numero)));
+                let (idx,verb) = db.get_rand_verb_lat(dec_to_test);
+
+                let _ = write!(buffer, "dimmi il {modo} {tempo} {persona} {numero} di {verb}: ");
+
+                question = Some(Question::VerbDecLat(idx, modo, tempo, persona, numero));
+            },
             Exercise::__Count => unreachable!(),
+            _ => return,
         }
 
         self.q_type = question;
@@ -202,8 +233,49 @@ impl<'a> ExerciseCheck<'a>{
                         None => false,
                     }
                 },
-                Question::NameDecLat(_) => false,
-                Question::VerbDecLat(_) => false,
+                Question::NameDecLat(name_id, caso, numero) => {
+                    let name = match db.get_name(*name_id){
+                        Some(name) => Paradigma::new(&name.latin[0], &name.latin[1]),
+                        None => {
+                            println!("invalid idx name in answer");
+                            return false;
+                        },
+                    };
+
+                    let declinato = match name.declina(*caso, *numero){
+                        Ok(dec) => dec,
+                        Err(e) => {
+                            println!("error declinazione di {name}: {e}");
+                            return false;
+                        },
+                    };
+                    match declinato == answer{
+                        true => good_job(),
+                        false => incorrect_answer(answer, &declinato),
+                    }
+                },
+                Question::VerbDecLat(verb_id, modo, tempo, persona, numero) => {
+                    let verb = match db.get_verb(*verb_id){
+                        Some(verb) => verbs::Paradigma::new(&verb.latin),
+                        None => {
+                            println!("invalid idx verb in answer");
+                            return false;
+                        },
+                    };
+
+                    let coniugato = match verb.coniuga_verbo(*modo, *tempo, *persona, *numero){
+                        Ok(dec) => dec,
+                        Err(e) => {
+                            println!("error coniugazione di {verb}: {e}");
+                            return false;
+                        },
+                    };
+                    
+                    match coniugato == answer{
+                        true => good_job(),
+                        false => incorrect_answer(answer, &coniugato),
+                    }
+                },
                 Question::NameMemoryIt(id) => {
                     if let Some(name) = db.get_name(*id){
                         let mut split = answer.split(",");
@@ -259,8 +331,6 @@ impl<'a> ExerciseCheck<'a>{
                         false
                     }
                 },
-                Question::NameDecIt(_) => false,
-                Question::VerbDecIt(_) => false,
             }
         }
         else

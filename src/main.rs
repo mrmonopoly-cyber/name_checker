@@ -3,6 +3,7 @@ mod declinazione;
 mod exercise;
 mod cli;
 mod verbs;
+mod common;
 
 use std::io::Write;
 use std::process::exit;
