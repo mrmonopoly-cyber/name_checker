@@ -155,9 +155,14 @@ impl DB{
         if self.db_verbs.is_empty() {
             (Id::default(),"")
         }else{
+            let con = usize::from(con);
+            let con_table = &self.db_verbs[con];
+            if con_table.is_empty(){
+                return (Id::default(), "");
+            }
             let verb_idx = rng().random_range(0..self.db_verbs.len());
-            let verb = &self.db_verbs[usize::from(con)][verb_idx];
-            (Id::new(usize::from(con), verb_idx), &verb.italian)
+            let verb = &con_table[verb_idx];
+            (Id::new(con, verb_idx), &verb.italian)
         }
     }
 
@@ -166,9 +171,14 @@ impl DB{
             (Id::default(), "")
         }
         else{
+            let dec = usize::from(dec);
+            let dec_table = &self.db_names[dec];
+            if dec_table.is_empty() {
+                return (Id::default(),"");
+            }
             let name_idx = rng().random_range(0..self.db_names.len());
-            let name = &self.db_names[usize::from(dec)][name_idx];
-            (Id::new(usize::from(dec), name_idx), &name.italian)
+            let name = &dec_table[name_idx];
+            (Id::new(dec, name_idx), &name.italian)
         }
     }
 }

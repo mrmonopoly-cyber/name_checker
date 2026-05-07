@@ -13,11 +13,11 @@ struct Args {
 
     /// test verbs memory 
     #[arg(short, long)]
-    verbs: Option<bool>,
+    verbs: bool,
 
     /// test name memory 
     #[arg(short, long)]
-    names: Option<bool>,
+    names: bool,
 
     /// test name declination
     #[arg(short, long)]
@@ -38,12 +38,12 @@ pub fn parse_cli_args(exer: &mut ExerciseCheck, db_ref: &mut DB) -> Result<(), S
     let mut declinazioni = ([const {Declinazioni::Prima};4],0);
     let mut lexical = ([const {LexicalType::Verbs};2],0);
 
-    if Some(true) == args.verbs {
+    if args.verbs {
         lexical.0[lexical.1] = LexicalType::Verbs;
         lexical.1+=1;
     }
 
-    if Some(true) == args.names{
+    if args.names{
         lexical.0[lexical.1] = LexicalType::Names;
         lexical.1+=1;
     }

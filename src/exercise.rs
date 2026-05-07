@@ -114,7 +114,7 @@ impl<'a> ExerciseCheck<'a>{
                 }
                 match l_type{
                     LexicalType::Names => {
-                        let dec = declinazione::Declinazioni::from(con_dec_to_ask);
+                        let dec = declinazione::Declinazioni::from(con_dec_to_ask + 1);
                         match dir_trad {
                             DirectionTraduction::ItalianoLatino => {
                                 let (idx, name) = db.get_rand_name_it(dec);
@@ -130,7 +130,7 @@ impl<'a> ExerciseCheck<'a>{
                         }
                     }
                     LexicalType::Verbs => {
-                        let con = verbs::Coniugazione::from(con_dec_to_ask);
+                        let con = verbs::Coniugazione::from(con_dec_to_ask + 1);
                         match dir_trad {
                             DirectionTraduction::ItalianoLatino => {
                                 let (idx, verb) = db.get_rand_verb_it(con);
