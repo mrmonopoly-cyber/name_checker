@@ -4,66 +4,58 @@ mod exercise;
 mod cli;
 mod verbs;
 
+use std::io::Write;
 use std::process::exit;
-
-use rand::RngExt;
-
-use self::cli::TestType;
 use self::db::DB;
-
+use self::exercise::ExeRes;
 
 fn main() {
-    let mut rng = rand::rng();
     let mut user_input = String::new();
-    let input = cli::parse_cli_args();
-    let db = match DB::new(&input.db_file){
-        Ok(db) => db,
-        Err(e) => {
-            println!("error creating db: {e}");
-            exit(1);
-        },
-    };
+    let mut exercise = exercise::ExerciseCheck::default();
+    let mut score = ExeRes::default();
+    if let Err(e) = cli::parse_cli_args(&mut exercise){
+        println!("error parsing cli input: {e}");
+        exit(1);
+    }
 
-    if input.test_type != 0
+    if exercise.num_exercise() != 0
     {
         loop{
-            let test : TestType = {
-                let mut possible = 0;
-                while (input.test_type & 1 << possible) == 0 {
-                    possible = rng.random_range(0..usize::from(cli::TestType::__Num_Test));
-                }
-                TestType::from(possible)
-            };
-
-            match test {
-                TestType::Lexical => {
-                    todo!()
-                },
-                TestType::Verbs => {
-                        let _verb = db.get_rand_verb();
-                },
-                TestType::Declination => {
-                        let _name = db.get_rand_name();
-                },
-                TestType::__Num_Test => unreachable!(),
+            exercise.question(&mut user_input);
+            print!("{}",user_input);
+            if let Err(e) = ::std::io::stdout().flush(){
+                println!("error flush stdout: {e}");
             }
 
-            user_input.clear();
-            match ::std::io::stdin().read_line(&mut user_input){
-                Err(e) => {
-                    println!("error reading stdin: {e}");
-                    continue;
-                },
-                Ok(_) => {
-                    user_input.pop();
-                },
+            if let Err(e) = get_user_input(&mut user_input){
+                println!("error reading user input {e}");
+                continue;
             }
 
             if user_input == exercise::QUIT_COMMAND {
                 break;
             }
+
+            match exercise.answer(&user_input) {
+                true => score.success(),
+                false => score.fail(),
+            }
         }
     }
 
-
+    println!("{}", score);
 }
+
+fn get_user_input(user_input: &mut String) -> Result<(), String>{
+    user_input.clear();
+    match ::std::io::stdin().read_line(user_input){
+        Err(e) => {
+            Err(format!("error reading stdin: {e}"))
+        },
+        Ok(_) => {
+            user_input.pop();
+            Ok(())
+        },
+    }
+}
+

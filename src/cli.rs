@@ -1,30 +1,15 @@
+use crate::verbs::Coniugazione;
+use crate::declinazione::Declinazioni;
 use clap::Parser;
-
-pub enum TestType{
-    Lexical,
-    Verbs,
-    Declination,
-
-
-    #[allow(nonstandard_style)]
-    __Num_Test
-}
-
-#[derive(Default)]
-pub struct ProgInput{
-    pub test_type : usize,
-    pub db_file: String, 
-    pub dec_tested: usize,
-}
-
-const DEFAULT_DB_PATH : &str = "db_file.txt";
+use crate::exercise::*;
+use crate::db::DB;
 
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
 
-    /// test verbs declination
+    /// test verbs memory 
     #[arg(short, long)]
     verbs: Option<bool>,
 
@@ -34,53 +19,73 @@ struct Args {
 
     /// test name declination
     #[arg(short, long)]
-    declinazione: Option<Vec<usize>>,
+    declinazioni: Option<Vec<usize>>,
+
+    /// test verbs coniugazions 
+    #[arg(short, long)]
+    conniugazini: Option<Vec<usize>>,
 
     /// custom db file
-    #[arg(short, long)]
+    #[arg(long)]
     db_file: Option<String>,
 }
 
-pub fn parse_cli_args() -> ProgInput{
+pub fn parse_cli_args(exer: &mut ExerciseCheck) -> Result<(), String>{
     let args = Args::parse();
-    let mut res = ProgInput::default();
+    let mut coniugazioni = ([const {Coniugazione::I};4],0);
+    let mut declinazioni = ([const {Declinazioni::Prima};4],0);
+    let mut lexical = ([const {LexicalType::Verbs};2],0);
 
     if Some(true) == args.verbs {
-        res.test_type |= 1 << usize::from(TestType::Verbs);
+        lexical.0[lexical.1] = LexicalType::Verbs;
+        lexical.1+=1;
     }
 
     if Some(true) == args.names{
-        res.test_type |= 1 << usize::from(TestType::Lexical);
+        lexical.0[lexical.1] = LexicalType::Names;
+        lexical.1+=1;
     }
 
-    if let Some(dec_list) = args.declinazione{
-        res.test_type |= 1 << usize::from(TestType::Declination);
+    if let Some(dec_list) = args.declinazioni{
         for dec in dec_list{
-            res.dec_tested |= 1 << dec;
+            if dec < usize::from(Declinazione::__Count){
+                declinazioni.0[declinazioni.1] = Declinazioni::from(dec);
+                declinazioni.1+=1;
+            }
         }
     }
 
-    match args.db_file{
-        Some(s) => res.db_file = s,
-        None => res.db_file.push_str(DEFAULT_DB_PATH),
-    };
-
-    res
-}
-
-impl From<TestType> for usize{
-    fn from(value: TestType) -> Self {
-        value as Self
-    }
-}
-
-impl From<usize> for TestType{
-    fn from(value: usize) -> Self {
-        match value{
-            0 => TestType::Lexical,
-            1 => TestType::Verbs,
-            2 => TestType::Declination,
-            _ => TestType::Lexical,
+    if let Some(con_list) = args.conniugazini{
+        for con in con_list {
+            if con < usize::from(Declinazione::__Count){
+                coniugazioni.0[coniugazioni.1] = Coniugazione::from(con);
+                coniugazioni.1+=1;
+            }
         }
     }
+
+    if let Some(s) = args.db_file{
+        match DB::new(&s) {
+            Ok(db) => exer.add_db(db),
+            Err(e) => return Err(format!("{e}")),
+        }
+    }
+
+    if coniugazioni.1 > 0 {
+        exer.add_exercise(Exercise::ConiugaVerb((Some(coniugazioni.0), coniugazioni.1)));
+        
+    }
+
+    if declinazioni.1 > 0 {
+        exer.add_exercise(Exercise::DeclinaName((Some(declinazioni.0), declinazioni.1)));
+    }
+
+    if lexical.1 > 0{
+        exer.add_exercise(Exercise::Lexical((Some(lexical.0), lexical.1)));
+    }
+
+
+    Ok(())
+
+
 }

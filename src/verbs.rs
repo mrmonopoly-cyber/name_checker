@@ -1,3 +1,6 @@
+use std::fmt::Display;
+use std::str::Matches;
+
 pub enum Modo {
     Indicativo,
     Congiuntivo,
@@ -17,6 +20,16 @@ pub enum Tempo{
     Piucheperfetto,
     Futuro,
     FuturoAnteriore
+}
+
+#[derive(Clone, Copy)]
+pub enum Coniugazione{
+    I,
+    II,
+    III,
+    IV,
+
+    __Count
 }
 
 pub enum Persona{
@@ -103,11 +116,10 @@ impl Paradigma<'_>
     }
 }
 
-
 type Congiugazione<'a, const N: usize> = [&'a str; N];
 
 struct FormaVerbale<'a, const N: usize>{
-    coniugazioni: [Congiugazione<'a, N>; 4],
+    coniugazioni: [Congiugazione<'a, N>; Coniugazione::__Count as usize],
 }
 
 trait InterfacciaVerbale {
@@ -333,4 +345,31 @@ impl InterfacciaVerbale for InvalidForma{
     {
         Err(VerbsError::ImpossibleRequest)
     }
+}
+
+impl Display for Paradigma<'_>{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{},{},{},{},{}",
+            self.tempi[0],
+            self.tempi[1],
+            self.tempi[2],
+            self.tempi[3],
+            self.tempi[4])
+    }
+    // add code here
+}
+
+impl From<usize> for Coniugazione{
+    fn from(value: usize) -> Self {
+        match value {
+            0 => Coniugazione::I,
+            1 => Coniugazione::II,
+            2 => Coniugazione::III,
+            3 => Coniugazione::IV,
+            4 => Coniugazione::__Count,
+
+            _ => unreachable!()
+        }
+    }
+    // add code here
 }

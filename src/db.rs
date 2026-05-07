@@ -1,4 +1,4 @@
-use std::fmt::{Display};
+use std::fmt::Display;
 use std::io::{self, BufRead};
 use std::fs::File;
 use std::path::Path;
@@ -75,11 +75,11 @@ impl DB{
         Ok(res)
     }
 
-    pub fn get_rand_verb<'a>(&self) -> verbs::Paradigma<'a>{
+    pub fn get_rand_verb<'a>(&self, con: verbs::Coniugazione) -> verbs::Paradigma<'a>{
         todo!()
     }
 
-    pub fn get_rand_name<'a>(&self) -> declinazione::Paradigma<'a>{
+    pub fn get_rand_name<'a>(&self, dec: declinazione::Declinazioni) -> declinazione::Paradigma<'a>{
         todo!()
     }
 }
