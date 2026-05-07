@@ -32,7 +32,7 @@ struct Args {
     db_file: Option<String>,
 }
 
-pub fn parse_cli_args(exer: &mut ExerciseCheck) -> Result<(), String>{
+pub fn parse_cli_args(exer: &mut ExerciseCheck, db_ref: &mut DB) -> Result<(), String>{
     let args = Args::parse();
     let mut coniugazioni = ([const {Coniugazione::I};4],0);
     let mut declinazioni = ([const {Declinazioni::Prima};4],0);
@@ -67,13 +67,12 @@ pub fn parse_cli_args(exer: &mut ExerciseCheck) -> Result<(), String>{
     }
 
     let db = match args.db_file {
-        Some(path) => DB::new(&path),
-        None => DB::new(DEFAULT_DB_PATH),
+        Some(path) => db_ref.init(&path),
+        None => db_ref.init(DEFAULT_DB_PATH),
     };
 
-    match db {
-        Ok(db) => exer.add_db(db),
-        Err(e) => return Err(format!("error init db: {e}")),
+    if let Err(e) = db{
+        return Err(format!("error init db: {e}"));
     }
     
 

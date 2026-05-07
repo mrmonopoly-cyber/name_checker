@@ -58,8 +58,14 @@ pub struct Paradigma<'a>{
 #[allow(dead_code)]
 impl<'a> Paradigma<'a>
 {
-    pub fn new(tempi: [&'a str; 5]) -> Self{
-        Self { tempi}
+    pub fn new(tempi: &'a [String; 5]) -> Self{
+        Self { tempi:[
+            &tempi[0],
+            &tempi[1],
+            &tempi[2],
+            &tempi[3],
+            &tempi[4],
+        ]}
     }
     fn get_coniugazione(&self) -> Result<usize, VerbsError>
     {
@@ -372,6 +378,13 @@ impl From<usize> for Coniugazione{
 
             _ => unreachable!()
         }
+    }
+    // add code here
+}
+
+impl Default for Paradigma<'_>{
+    fn default() -> Self {
+        Self { tempi: ["","","","",""] }
     }
     // add code here
 }

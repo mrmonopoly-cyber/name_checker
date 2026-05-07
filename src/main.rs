@@ -13,10 +13,12 @@ fn main() {
     let mut user_input = String::new();
     let mut exercise = exercise::ExerciseCheck::default();
     let mut score = ExeRes::default();
-    if let Err(e) = cli::parse_cli_args(&mut exercise){
+    let mut db = DB::default();
+    if let Err(e) = cli::parse_cli_args(&mut exercise, &mut db){
         println!("error parsing cli input: {e}");
         exit(1);
     }
+    exercise.add_db(&db);
 
     if exercise.num_exercise() != 0
     {

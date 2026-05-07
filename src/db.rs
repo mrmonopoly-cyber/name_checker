@@ -2,6 +2,8 @@ use std::fmt::Display;
 use std::io::{self, BufRead};
 use std::fs::File;
 use std::path::Path;
+use rand::{rng, RngExt};
+
 use crate::verbs;
 use crate::declinazione;
 
@@ -13,17 +15,25 @@ pub enum DBError {
 
 #[derive(Debug, Clone)]
 pub struct Name {
-    pub italian: String,
-    pub latin: [String;2],
+    italian: String,
+    latin: [String;2],
 }
 
+#[derive(Debug, Clone)]
+pub struct Verbs{
+    italian: String,
+    latin: [String;5],
+}
+
+#[derive(Default)]
 pub struct DB{
-    db: Vec::<Name>,
+    db_names: Vec::<Name>,
+    db_verbs: Vec::<Verbs>,
     it_i: usize,
 }
 
 impl DB{
-    pub fn new(path : &str) -> Result<Self, DBError>
+    pub fn init(&mut self, path : &str) -> Result<(), DBError>
     {
         macro_rules! check_split {
             ($split:expr, $error: expr) => {
@@ -34,7 +44,6 @@ impl DB{
 
             };
         }
-        let mut res = Self{db: Vec::new(), it_i:0};
         let mut italian = String::new();
         let mut latins = String::new();
         let lines = match read_lines(path){
@@ -68,19 +77,53 @@ impl DB{
                     latin: [lat_nom.to_string(), lat_gen.to_string()],
                 };
 
-                res.db.push(ele);
+                self.db_names.push(ele);
             }
         }
-
-        Ok(res)
+        Ok(())
     }
 
-    pub fn get_rand_verb<'a>(&self, _con: verbs::Coniugazione) -> verbs::Paradigma<'a>{
-        verbs::Paradigma::new(["verbo","maledetto","strono","infame","cacone"])
+    pub fn get_rand_verb_lat<'a>(&'a self, _con: verbs::Coniugazione) -> verbs::Paradigma<'a>{
+        if self.db_verbs.is_empty() {
+            verbs::Paradigma::default()
+        }else{
+            let verb_idx = rng().random_range(0..self.db_verbs.len());
+            let verb = &self.db_verbs[verb_idx];
+            verbs::Paradigma::new(&verb.latin)
+        }
+
     }
 
-    pub fn get_rand_name<'a>(&self, _dec: declinazione::Declinazioni) -> declinazione::Paradigma<'a>{
-        declinazione::Paradigma::new("nome", "gene")
+    pub fn get_rand_name_lat<'a>(&'a self, _dec: declinazione::Declinazioni) ->
+        declinazione::Paradigma<'a>{
+            if self.db_names.is_empty(){
+                declinazione::Paradigma::default()
+            }else{
+                let name_idx = rng().random_range(0..self.db_names.len());
+                let name = &self.db_names[name_idx];
+                declinazione::Paradigma::new(&name.latin[0], &name.latin[1])
+            }
+    }
+
+    pub fn get_rand_verb_it(&self, _con: verbs::Coniugazione) -> &str{
+        if self.db_verbs.is_empty() {
+            ""
+        }else{
+            let verb_idx = rng().random_range(0..self.db_verbs.len());
+            let verb = &self.db_verbs[verb_idx];
+            &verb.italian
+        }
+    }
+
+    pub fn get_rand_name_it(&self, _dec: declinazione::Declinazioni) -> &str{
+        if self.db_names.is_empty(){
+            ""
+        }
+        else{
+            let name_idx = rng().random_range(0..self.db_names.len());
+            let name = &self.db_names[name_idx];
+            &name.italian
+        }
     }
 }
 
@@ -94,8 +137,8 @@ impl Iterator for DB{
     type Item = Name;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.it_i < self.db.len(){
-            let name = self.db[self.it_i].clone();
+        if self.it_i < self.db_names.len(){
+            let name = self.db_names[self.it_i].clone();
             self.it_i+=1;
             return Some(name);
         }

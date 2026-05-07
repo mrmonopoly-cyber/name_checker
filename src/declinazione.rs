@@ -38,6 +38,7 @@ pub enum DeclinazioneError {
 }
 
 #[allow(dead_code)]
+#[derive(Default)]
 pub struct Paradigma<'a>{
     nominativo: &'a str,
     genitivo: &'a str,

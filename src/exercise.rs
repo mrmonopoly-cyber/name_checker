@@ -44,22 +44,27 @@ pub enum Exercise{
 }
 
 enum Question<'a>{
-    NameMemory((DirectionTraduction, declinazione::Paradigma<'a>)),
-    VerbMemory((DirectionTraduction, verbs::Paradigma<'a>)),
-    NameDec(DirectionTraduction, declinazione::Paradigma<'a>),
-    VerbDec(DirectionTraduction, verbs::Paradigma<'a>),
+    NameMemoryLat(declinazione::Paradigma<'a>),
+    VerbMemoryLat(verbs::Paradigma<'a>),
+    NameDecLat(declinazione::Paradigma<'a>),
+    VerbDecLat(verbs::Paradigma<'a>),
+
+    NameMemoryIt(&'a str),
+    VerbMemoryIt(&'a str),
+    NameDecIt(()),
+    VerbDecIt(()),
 }
 
 #[derive(Default)]
 pub struct ExerciseCheck<'a>{
-    db: Option<DB>,
+    db: Option<&'a DB>,
     checkable : [Exercise; 4],
     amount_to_check: usize,
     q_type: Option<Question<'a>>,
 }
 
-impl ExerciseCheck<'_>{
-    pub fn add_db(&mut self, db: DB) {
+impl<'a> ExerciseCheck<'a>{
+    pub fn add_db(&mut self, db: &'a DB) {
         self.db = Some(db);
     }
 
@@ -103,15 +108,35 @@ impl ExerciseCheck<'_>{
                     match l_type{
                         LexicalType::Names => {
                             let dec = declinazione::Declinazioni::from(con_dec_to_ask);
-                            let paradigma = db.get_rand_name(dec);
-                            let _ = write!(buffer, "{}", paradigma);
-                            question = Some(Question::NameMemory((dir_trad, paradigma)))
+                            match dir_trad {
+                                DirectionTraduction::ItalianoLatino => {
+                                    let name= db.get_rand_name_it(dec);
+                                    let _ = write!(buffer, "{}", name);
+                                    question = Some(Question::NameMemoryIt(name))
+                                },
+                                DirectionTraduction::LatinoItaliano => {
+                                    let paradigma = db.get_rand_name_lat(dec);
+                                    let _ = write!(buffer, "{}", paradigma);
+                                    question = Some(Question::NameMemoryLat(paradigma))
+                                },
+                                DirectionTraduction::__Count => unreachable!(),
+                            }
                         }
                         LexicalType::Verbs => {
                             let con = verbs::Coniugazione::from(con_dec_to_ask);
-                            let paradigma = db.get_rand_verb(con);
-                            let _ = write!(buffer, "{}", paradigma);
-                            question = Some(Question::VerbMemory((dir_trad, paradigma)))
+                            match dir_trad {
+                                DirectionTraduction::ItalianoLatino => {
+                                    let verb = db.get_rand_verb_it(con);
+                                    let _ = write!(buffer, "{}", verb);
+                                    question = Some(Question::VerbMemoryIt(verb))
+                                },
+                                DirectionTraduction::LatinoItaliano => {
+                                    let paradigma = db.get_rand_verb_lat(con);
+                                    let _ = write!(buffer, "{}", paradigma);
+                                    question = Some(Question::VerbMemoryLat(paradigma))
+                                },
+                                DirectionTraduction::__Count => unreachable!(),
+                            }
                         },
                     }
 
