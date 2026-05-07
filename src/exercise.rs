@@ -156,9 +156,10 @@ impl<'a> ExerciseCheck<'a>{
     }
 
     pub fn answer(&self, answer: &str) -> bool{
-        fn missing_input(){
+        fn missing_input() -> bool{
             println!("missing input");
             let _ =std::io::Write::flush(&mut ::std::io::stdout());
+            false
         }
 
         fn good_job() -> bool{
@@ -177,45 +178,53 @@ impl<'a> ExerciseCheck<'a>{
             match question {
                 Question::NameMemoryLat(id) => {
                     let correct_it = db.get_name(*id);
-                    if let Some(correct_it) = correct_it{
-                        match correct_it.italian == answer{
-                            true => return good_job(),
-                            false => {
-                                incorrect_answer(answer, &correct_it.italian);
-                            },
-                        }
+                    match correct_it{
+                        Some(correct_it) => {
+                            match correct_it.italian == answer{
+                                true => good_job(),
+                                false => {
+                                    incorrect_answer(answer, &correct_it.italian)
+                                },
+                            }
+                        },
+                        None => false,
                     }
                 },
                 Question::VerbMemoryLat(id) => {
                     let correct_it = db.get_verb(*id);
-                    if let Some(correct_it) = correct_it{
-                        match correct_it.italian == answer{
-                            true => return good_job(),
-                            false => {incorrect_answer(answer, &correct_it.italian);},
-                        }
+                    match correct_it{
+                        Some(correct_it) => {
+                            match correct_it.italian == answer{
+                                true => good_job(),
+                                false => incorrect_answer(answer, &correct_it.italian),
+                            }
+                        },
+                        None => false,
                     }
                 },
-                Question::NameDecLat(_) => (),
-                Question::VerbDecLat(_) => (),
+                Question::NameDecLat(_) => false,
+                Question::VerbDecLat(_) => false,
                 Question::NameMemoryIt(id) => {
                     if let Some(name) = db.get_name(*id){
                         let mut split = answer.split(",");
                         let nominativo = split.next();
                         let genitivo = split.next();
 
-                        if let Some(nominativo) = nominativo &&  let Some(genitivo) = genitivo{
-                            match nominativo == name.latin[0] && genitivo == name.latin[1]{
-                                true => return good_job(),
-                                false =>{
-                                    incorrect_answer(
-                                    &format!("{},{}", nominativo, genitivo), 
-                                    &format!("{},{}", name.latin[0], name.latin[1]));
-                                },
-                            }
+                        match (nominativo,genitivo){
+                            (Some(nominativo), Some(genitivo)) => {
+                                match nominativo == name.latin[0] && genitivo == name.latin[1]{
+                                    true => good_job(),
+                                    false => incorrect_answer(
+                                        &format!("{},{}", nominativo, genitivo), 
+                                        &format!("{},{}", name.latin[0], name.latin[1]))
+                                        ,
+                                }
+                            },
+                            _ => missing_input(),
                         }
-                        else{
-                            missing_input();
-                        }
+                    }
+                    else{
+                        false
                     }
                 },
                 Question::VerbMemoryIt(id) => {
@@ -244,15 +253,20 @@ impl<'a> ExerciseCheck<'a>{
                             }
                         }
 
-                        return good_job();
+                        good_job()
+                    }
+                    else{
+                        false
                     }
                 },
-                Question::NameDecIt(_) => (),
-                Question::VerbDecIt(_) => (),
+                Question::NameDecIt(_) => false,
+                Question::VerbDecIt(_) => false,
             }
         }
-        
-        false
+        else
+        {
+            false
+        }
     }
 }
 
