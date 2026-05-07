@@ -51,8 +51,8 @@ enum Question{
 
     NameMemoryIt(usize),
     VerbMemoryIt(usize),
-    NameDecIt(()),
-    VerbDecIt(()),
+    NameDecIt(usize),
+    VerbDecIt(usize),
 }
 
 #[derive(Default)]
@@ -167,9 +167,10 @@ impl<'a> ExerciseCheck<'a>{
             true
         }
 
-        fn incorrect_answer(given: &str, expected: &str) {
+        fn incorrect_answer(given: &str, expected: &str) -> bool {
             println!("error: given {}, expected: {}", given, expected);
             let _ =std::io::Write::flush(&mut ::std::io::stdout());
+            false
         }
 
         if let Some(db) = self.db && let Some(question) = &self.q_type{
@@ -179,11 +180,21 @@ impl<'a> ExerciseCheck<'a>{
                     if let Some(correct_it) = correct_it{
                         match correct_it.italian == answer{
                             true => return good_job(),
-                            false => incorrect_answer(answer, &correct_it.italian),
+                            false => {
+                                incorrect_answer(answer, &correct_it.italian);
+                            },
                         }
                     }
                 },
-                Question::VerbMemoryLat(_) => (),
+                Question::VerbMemoryLat(id) => {
+                    let correct_it = db.get_verb(*id);
+                    if let Some(correct_it) = correct_it{
+                        match correct_it.italian == answer{
+                            true => return good_job(),
+                            false => {incorrect_answer(answer, &correct_it.italian);},
+                        }
+                    }
+                },
                 Question::NameDecLat(_) => (),
                 Question::VerbDecLat(_) => (),
                 Question::NameMemoryIt(id) => {
@@ -195,9 +206,11 @@ impl<'a> ExerciseCheck<'a>{
                         if let Some(nominativo) = nominativo &&  let Some(genitivo) = genitivo{
                             match nominativo == name.latin[0] && genitivo == name.latin[1]{
                                 true => return good_job(),
-                                false =>incorrect_answer(
+                                false =>{
+                                    incorrect_answer(
                                     &format!("{},{}", nominativo, genitivo), 
-                                    &format!("{},{}", name.latin[0], name.latin[1])),
+                                    &format!("{},{}", name.latin[0], name.latin[1]));
+                                },
                             }
                         }
                         else{
@@ -205,7 +218,35 @@ impl<'a> ExerciseCheck<'a>{
                         }
                     }
                 },
-                Question::VerbMemoryIt(_) => (),
+                Question::VerbMemoryIt(id) => {
+                    if let Some(verb) = db.get_verb(*id){
+                        let mut split = answer.split(",");
+                        let mut parad = ["","","","",""];
+                        let verb = &verb.latin;
+
+                        for cell in &mut parad{
+                            *cell = match split.next(){
+                                Some(s) => s,
+                                None => {
+                                    missing_input();
+                                    return false;
+                                },
+                            }
+                        }
+
+                        for i in 0..parad.len(){
+                            if verb[i] != parad[i]{
+                                return incorrect_answer(
+                                    &format!("{},{},{},{},{}",
+                                        parad[0], parad[1], parad[2], parad[3], parad[4]), 
+                                    &format!("{},{},{},{},{}",
+                                        verb[0], verb[1], verb[2], verb[3], verb[4]));
+                            }
+                        }
+
+                        return good_job();
+                    }
+                },
                 Question::NameDecIt(_) => (),
                 Question::VerbDecIt(_) => (),
             }
