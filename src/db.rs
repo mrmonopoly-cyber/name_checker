@@ -75,12 +75,12 @@ impl DB{
         Ok(res)
     }
 
-    pub fn get_rand_verb<'a>(&self, con: verbs::Coniugazione) -> verbs::Paradigma<'a>{
-        todo!()
+    pub fn get_rand_verb<'a>(&self, _con: verbs::Coniugazione) -> verbs::Paradigma<'a>{
+        verbs::Paradigma::new(["verbo","maledetto","strono","infame","cacone"])
     }
 
-    pub fn get_rand_name<'a>(&self, dec: declinazione::Declinazioni) -> declinazione::Paradigma<'a>{
-        todo!()
+    pub fn get_rand_name<'a>(&self, _dec: declinazione::Declinazioni) -> declinazione::Paradigma<'a>{
+        declinazione::Paradigma::new("nome", "gene")
     }
 }
 

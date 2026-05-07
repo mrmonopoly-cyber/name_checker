@@ -4,6 +4,8 @@ use clap::Parser;
 use crate::exercise::*;
 use crate::db::DB;
 
+const DEFAULT_DB_PATH : &str = "db_file.txt";
+
 /// Simple program to greet a person
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -64,12 +66,16 @@ pub fn parse_cli_args(exer: &mut ExerciseCheck) -> Result<(), String>{
         }
     }
 
-    if let Some(s) = args.db_file{
-        match DB::new(&s) {
-            Ok(db) => exer.add_db(db),
-            Err(e) => return Err(format!("{e}")),
-        }
+    let db = match args.db_file {
+        Some(path) => DB::new(&path),
+        None => DB::new(DEFAULT_DB_PATH),
+    };
+
+    match db {
+        Ok(db) => exer.add_db(db),
+        Err(e) => return Err(format!("error init db: {e}")),
     }
+    
 
     if coniugazioni.1 > 0 {
         exer.add_exercise(Exercise::ConiugaVerb((Some(coniugazioni.0), coniugazioni.1)));
@@ -86,6 +92,4 @@ pub fn parse_cli_args(exer: &mut ExerciseCheck) -> Result<(), String>{
 
 
     Ok(())
-
-
 }

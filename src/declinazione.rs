@@ -44,8 +44,12 @@ pub struct Paradigma<'a>{
 }
 
 #[allow(dead_code)]
-impl Paradigma<'_>
+impl<'b> Paradigma<'b>
 {
+    pub fn new(nominativo: &'b str, genitivo: &'b str) -> Self{
+        Paradigma { nominativo, genitivo }
+    }
+
     fn get_declinazione<'a>(&self) -> Result<&'a BasicDeclinazione<'a>, DeclinazioneError>{
         for dec in DECLINAZIONI.iter(){
             let nom_sing = dec.numero[usize::from(Numero::Singolare)][usize::from(Casi::Nominativo)];
@@ -151,6 +155,7 @@ impl From<usize> for Declinazioni{
     fn from(value: usize) -> Self {
         match value {
             0 => Self::Prima,
+            1 => Self::__Num__Declinazioni,
             _ => unreachable!(),
         }
     }

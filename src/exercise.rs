@@ -84,17 +84,18 @@ impl ExerciseCheck<'_>{
 
         match self.checkable[q_type]{
             Exercise::Lexical((list, len)) => {
-                let l_type = LexicalType::from(rng.random_range(0..len));
+                let l_type = list.unwrap()[rng.random_range(0..len)];
                 con_dec_to_ask = {
                     let idx = rng.random_range(0..len);
                     usize::from(list.unwrap()[idx])
                 };
+                let _ = write!(buffer, "traduci ");
                 match dir_trad {
                     DirectionTraduction::ItalianoLatino => {
-                        let _ = write!(buffer, "traduci dall'italiano al latino ");
+                        let _ = write!(buffer, "dall'italiano al latino ");
                     },
                     DirectionTraduction::LatinoItaliano => {
-                        let _ = write!(buffer, "traduci dal latino all'italiano ");
+                        let _ = write!(buffer, "dal latino all'italiano ");
                     },
                     DirectionTraduction::__Count => unreachable!(),
                 }
@@ -113,6 +114,11 @@ impl ExerciseCheck<'_>{
                             question = Some(Question::VerbMemory((dir_trad, paradigma)))
                         },
                     }
+
+                    let _ = write!(buffer, ": ");
+                }
+                else{
+                    println!("no db")
                 }
             },
             Exercise::DeclinaName(_) => todo!(),

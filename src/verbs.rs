@@ -1,5 +1,4 @@
 use std::fmt::Display;
-use std::str::Matches;
 
 pub enum Modo {
     Indicativo,
@@ -57,8 +56,11 @@ pub struct Paradigma<'a>{
 }
 
 #[allow(dead_code)]
-impl Paradigma<'_>
+impl<'a> Paradigma<'a>
 {
+    pub fn new(tempi: [&'a str; 5]) -> Self{
+        Self { tempi}
+    }
     fn get_coniugazione(&self) -> Result<usize, VerbsError>
     {
         let indic_presente = self.tempi[0];
