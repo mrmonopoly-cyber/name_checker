@@ -44,9 +44,9 @@ fn main() {
                 false => score.fail(),
             }
         }
+        println!("{}", score);
     }
 
-    println!("{}", score);
 }
 
 fn get_user_input(user_input: &mut String) -> Result<(), String>{
