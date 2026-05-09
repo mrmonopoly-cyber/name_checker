@@ -1,5 +1,5 @@
 use std::fmt::Display;
-use std::io::{self, BufRead};
+use std::io::{self, BufRead, BufReader, Lines};
 use std::fs::File;
 use std::path::Path;
 use rand::{rng, RngExt};
@@ -8,9 +8,8 @@ use crate::verbs;
 use crate::declinazione;
 
 pub enum DBError {
-    InvalidLinePattern (usize),
+    InvalidLinePattern (String),
     IO (::std::io::Error),
-    
 }
 
 #[derive(Debug, Clone)]
@@ -41,68 +40,146 @@ impl Id {
     fn new(cat: usize, idx: usize) -> Self{
         Self { cat, idx }
     }
-    
+
+}
+
+#[derive(PartialEq)]
+enum SectionCategory{
+    Names,
+    Verbs,
+    None,
+}
+
+enum LineType<'a> {
+    Section(SectionCategory),
+    Data(&'a str),
+    Comment,
+    Empty,
+    CloseSection,
+}
+
+macro_rules! check_split {
+    ($split:expr, $error: expr) => {
+        match $split{
+            Some(s) => s,
+            None => return $error,
+        }
+
+    };
 }
 
 impl DB{
-    pub fn init(&mut self, path : &str) -> Result<(), DBError>
-    {
-        macro_rules! check_split {
-            ($split:expr, $error: expr) => {
-                match $split{
-                    Some(s) => s,
-                    None => return $error,
-                }
-
-            };
+    fn parse_line<'a>(&mut self, line: &'a str) -> LineType<'a> {
+        if line.starts_with('#') {
+            LineType::Comment
         }
+        else if line.is_empty(){
+            LineType::Empty
+        }
+
+        else if line == "Names{" {
+            LineType::Section(SectionCategory::Names)
+        }
+
+        else if line == "Verbs{" {
+            LineType::Section(SectionCategory::Verbs)
+        }
+
+        else if line == "}"{
+            LineType::CloseSection
+        }
+        else{
+            LineType::Data(line)
+        }
+    }
+
+    fn parse_section(&mut self, lines: &mut Lines<BufReader<File>>) -> Result<bool, DBError>{
+        let mut section = SectionCategory::None;
         let mut italian = String::new();
         let mut latins = String::new();
-        let lines = match read_lines(path){
+
+        while let Some(Ok(untrim_line)) = lines.next(){
+            let line = untrim_line.trim();
+            match self.parse_line(line) {
+                LineType::Section(section_category) => {
+                    if section == SectionCategory::None {
+                        section = section_category;
+                    }
+                    else if let Err(e) = self.parse_section(lines){
+                        return Err(e);
+                    }
+                },
+                LineType::Data(s) => {
+                    match section {
+                        SectionCategory::Names => {
+                            let words : Vec<&str> = line.split(':').collect();
+                            if words.len() != 2 {
+                                return Err(DBError::InvalidLinePattern(untrim_line));
+                            }
+                            italian.clear();
+                            latins.clear();
+
+                            italian.push_str(words[0]);
+                            latins.push_str(words[1]);
+
+                            let mut split = latins.split(',');
+
+                            let lat_nom = check_split!(
+                                split.next(), Err(DBError::InvalidLinePattern(untrim_line)));
+                            let lat_gen = check_split!(
+                                split.next(), Err(DBError::InvalidLinePattern(untrim_line)));
+
+                            let ele = Name{
+                                italian: italian.to_string(),
+                                latin: [lat_nom.to_string(), lat_gen.to_string()],
+                            };
+
+                            let dec =declinazione::Paradigma::new(&ele.latin[0], &ele.latin[1])
+                                .get_declinazione();
+
+                            let (num, _) = match dec{
+                                Ok(d) => d,
+                                Err(e) => {
+                                    println!("error finding declinazione of {ele}: {e}");
+                                    continue;
+                                },
+                            };
+
+                            self.db_names[num].push(ele);
+                        },
+                        SectionCategory::Verbs => {
+                            todo!("parse verb");
+                        },
+                        SectionCategory::None => {
+                            println!("WARNING: {s} is not in a category and will be lost");
+                        },
+                    }
+                },
+                LineType::Comment | LineType::Empty => (),
+                LineType::CloseSection => return Ok(false),
+            }
+        };
+
+        Ok(true)
+
+    }
+
+    pub fn init(&mut self, path : &str) -> Result<(), DBError>
+    {
+        let mut lines = match read_lines(path){
             Ok(l) => l,
             Err(e) => {
                 return Err(DBError::IO(e));
             },
         };
 
-        for (idx, line) in lines.map_while(Result::ok).enumerate() {
-            let error = Err(DBError::InvalidLinePattern(idx));
-            if !line.starts_with('#') && !line.is_empty() {
-                let words : Vec<&str> = line.split(':').collect();
-                if words.len() != 2 {
-                    return error;
-                }
-
-                italian.clear();
-                latins.clear();
-
-                italian.push_str(words[0]);
-                latins.push_str(words[1]);
-
-                let mut split = latins.split(',');
-
-                let lat_nom = check_split!(split.next(), error);
-                let lat_gen = check_split!(split.next(), error);
-
-                let ele = Name{
-                    italian: italian.to_string(),
-                    latin: [lat_nom.to_string(), lat_gen.to_string()],
-                };
-
-                let dec =declinazione::Paradigma::new(&ele.latin[0], &ele.latin[1])
-                    .get_declinazione();
-                let (num, _) = match dec{
-                    Ok(d) => d,
-                    Err(e) => {
-                        println!("error finding declinazione of {ele}: {e}");
-                        continue;
-                    },
-                };
-
-                self.db_names[num].push(ele);
+        loop{
+            match self.parse_section(&mut lines) {
+                Ok(true) => return Ok(()),
+                Err(e) => return Err(e),
+                _ => (),
             }
         }
-        Ok(())
     }
 
     pub fn get_name(&self, id: Id) -> Option<&Name> {
@@ -149,7 +226,7 @@ impl DB{
 
                 (id,paradigma)
             }
-    }
+        }
 
     pub fn get_rand_verb_it(&self, con: verbs::Coniugazione) -> (Id, &str){
         if self.db_verbs.is_empty() {
