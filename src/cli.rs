@@ -4,7 +4,7 @@ use clap::{value_parser, Arg, ArgAction, Command};
 use crate::exercise::*;
 use crate::db::DB;
 
-const DEFAULT_DB_PATH : &str = "db_file.txt";
+const DEFAULT_DB_PATH : &str = "db_file.cfg";
 
 pub fn parse_cli_args(exer: &mut ExerciseCheck, db_ref: &mut DB) -> Result<(), String>{
     let command = Command::new("latino")

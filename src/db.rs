@@ -131,7 +131,10 @@ impl DB{
 
                             let ele = Name{
                                 italian: italian.to_string(),
-                                latin: [lat_nom.to_string(), lat_gen.to_string()],
+                                latin: [
+                                    lat_nom.to_string(),
+                                    lat_gen.to_string()
+                                ],
                             };
 
                             let dec =declinazione::Paradigma::new(&ele.latin[0], &ele.latin[1])
@@ -148,7 +151,52 @@ impl DB{
                             self.db_names[num].push(ele);
                         },
                         SectionCategory::Verbs => {
-                            todo!("parse verb");
+                            let words : Vec<&str> = line.split(':').collect();
+                            if words.len() != 2 {
+                                return Err(DBError::InvalidLinePattern(untrim_line));
+                            }
+                            italian.clear();
+                            latins.clear();
+
+                            italian.push_str(words[0]);
+                            latins.push_str(words[1]);
+
+                            let mut split = latins.split(',');
+
+                            let ind_pre_1_pers = check_split!(
+                                split.next(), Err(DBError::InvalidLinePattern(untrim_line)));
+                            let ind_pre_2_pers= check_split!(
+                                split.next(), Err(DBError::InvalidLinePattern(untrim_line)));
+                            let perfetto = check_split!(
+                                split.next(), Err(DBError::InvalidLinePattern(untrim_line)));
+                            let supino = check_split!(
+                                split.next(), Err(DBError::InvalidLinePattern(untrim_line)));
+                            let infinito = check_split!(
+                                split.next(), Err(DBError::InvalidLinePattern(untrim_line)));
+
+                            let ele = Verbs{
+                                italian: italian.to_string(),
+                                latin: [
+                                    ind_pre_1_pers.to_string(),
+                                    ind_pre_2_pers.to_string(),
+                                    perfetto.to_string(),
+                                    supino.to_string(),
+                                    infinito.to_string()
+                                ],
+                            };
+
+                            let con = verbs::Paradigma::new(&ele.latin)
+                                .get_coniugazione();
+
+                            let num = match con{
+                                Ok(c) => c,
+                                Err(e) => {
+                                    println!("error finding Coniugazione of {ele}: {e}");
+                                    continue;
+                                },
+                            };
+
+                            self.db_verbs[num].push(ele);
                         },
                         SectionCategory::None => {
                             println!("WARNING: {s} is not in a category and will be lost");
@@ -237,7 +285,7 @@ impl DB{
             if con_table.is_empty(){
                 return (Id::default(), "");
             }
-            let verb_idx = rng().random_range(0..self.db_verbs.len());
+            let verb_idx = rng().random_range(0..self.db_verbs[con].len());
             let verb = &con_table[verb_idx];
             (Id::new(con, verb_idx), &verb.italian)
         }
@@ -269,6 +317,18 @@ where P: AsRef<Path>, {
 impl Display for Name{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}:[{},{}]", self.italian, self.latin[0], self.latin[1])
+    }
+}
+
+impl Display for Verbs{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}:[{},{},{},{},{}]", self.italian,
+            self.latin[0],
+            self.latin[1],
+            self.latin[2],
+            self.latin[3],
+            self.latin[4],
+            )
     }
 }
 

@@ -98,10 +98,7 @@ impl<'a> ExerciseCheck<'a>{
         match self.checkable[q_type]{
             Exercise::Lexical((list, len)) => {
                 let l_type = list.unwrap()[rng.random_range(0..len)];
-                con_dec_to_ask = {
-                    let idx = rng.random_range(0..len);
-                    usize::from(list.unwrap()[idx])
-                };
+                con_dec_to_ask = rng.random_range(0..4);
                 let _ = write!(buffer, "traduci ");
                 match dir_trad {
                     DirectionTraduction::ItalianoLatino => {

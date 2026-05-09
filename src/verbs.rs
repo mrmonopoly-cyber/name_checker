@@ -70,37 +70,35 @@ impl<'a> Paradigma<'a>
             &tempi[4],
         ]}
     }
-    fn get_coniugazione(&self) -> Result<usize, VerbsError>
+    pub fn get_coniugazione(&self) -> Result<usize, VerbsError>
     {
-        let indic_presente = self.tempi[0];
-        let i_len = indic_presente.len();
-        let mut indic_presente = indic_presente.chars();
+        let indic_presente_prima = self.tempi[0];
+        let indic_presente_seconda = self.tempi[1];
+        let i_len_prima = indic_presente_prima.len();
+        let i_len_seconda = indic_presente_seconda.len();
 
         let coniugazioni = &INDICATIVO.presente.coniugazioni;
 
         for (idx,c) in coniugazioni.iter().enumerate(){
-            let suffix_prima_persona_singolare = c[0];
-            let mut valid = true;
+            let suffix_pri_sing = c[0];
+            let suffix_sec_sing = c[1];
+            let mut valid = 0;
 
-            for (idx, c_suffix) in suffix_prima_persona_singolare.chars().enumerate()
-            {
-                match indic_presente.nth(i_len - 1 - idx){
-                    Some(c) => {
-                        if c != c_suffix {
-                            valid = false;
-                            break;
-                        }
-                    },
-                    None => {
-                        valid = false;
-                        break;
-                    },
-                }
+            let suffix = indic_presente_prima.get(i_len_prima - suffix_pri_sing.len()..);
+            if let Some(suffix) = suffix && suffix == suffix_pri_sing{
+                valid+=1;
             }
 
-            if valid{
-                return Ok(idx)
+            let suffix = indic_presente_seconda.get(i_len_seconda - suffix_sec_sing.len()..);
+
+            if let Some(suffix) = suffix && suffix == suffix_sec_sing{
+                valid+=1;
             }
+
+            if valid == 2{
+                return Ok(idx);
+            }
+
         }
 
         Err(VerbsError::ConiugazioneNotFound)
