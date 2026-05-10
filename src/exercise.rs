@@ -120,12 +120,12 @@ impl<'a> ExerciseCheck<'a> {
         match dir_trad {
             DirectionTraduction::ItalianoLatino => {
                 let (idx, it) = db.get_rand_it(cat, l_type)?;
-                let _ = write!(buffer, "{}", it);
+                let _ = write!(buffer, "{}: ", it);
                 Some(Question::LexicalIt(SectionCategory::Names, idx))
             }
             DirectionTraduction::LatinoItaliano => {
                 let (idx, paradigma) = db.get_rand_lat(cat, l_type)?;
-                let _ = write!(buffer, "{}", paradigma);
+                let _ = write!(buffer, "{}: ", paradigma);
                 Some(Question::LexicalLat(cat, idx))
             }
             DirectionTraduction::__Count => unreachable!(),
@@ -146,7 +146,6 @@ impl<'a> ExerciseCheck<'a> {
             }
         };
 
-        println!("q_type: {}",q_type);
         let exer = self.checkable[q_type];
         let decs = &exer.decs;
 
