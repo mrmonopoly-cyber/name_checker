@@ -9,6 +9,16 @@ pub enum Numero{
     __Num__Numero
 }
 
+#[derive(Clone, Copy)]
+pub enum DeclinazioneConiugazione{
+    I,
+    II,
+    III,
+    IV,
+
+    __Count
+}
+
 impl From<Numero> for usize{
     fn from(value: Numero) -> Self {
         value as usize
@@ -34,4 +44,38 @@ impl Display for Numero{
             Numero::__Num__Numero => unreachable!(),
         }
     }
+}
+
+impl From<DeclinazioneConiugazione> for usize{
+    fn from(value: DeclinazioneConiugazione) -> Self {
+        value as Self
+    }
+}
+
+impl From<usize> for DeclinazioneConiugazione{
+    fn from(value: usize) -> Self {
+        match value {
+            1 => DeclinazioneConiugazione::I,
+            2 => DeclinazioneConiugazione::II,
+            3 => DeclinazioneConiugazione::III,
+            4 => DeclinazioneConiugazione::IV,
+            5 => DeclinazioneConiugazione::__Count,
+
+            _ => unreachable!()
+        }
+    }
+    // add code here
+}
+
+impl Display for DeclinazioneConiugazione{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self{
+            DeclinazioneConiugazione::I => "I",
+            DeclinazioneConiugazione::II => "II",
+            DeclinazioneConiugazione::III => "III",
+            DeclinazioneConiugazione::IV => "IV",
+            DeclinazioneConiugazione::__Count => unreachable!(),
+        })
+    }
+    // add code here
 }

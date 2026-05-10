@@ -1,6 +1,5 @@
-use crate::verbs::Coniugazione;
-use crate::declinazione::Declinazioni;
 use clap::{value_parser, Arg, ArgAction, Command};
+use crate::common::DeclinazioneConiugazione;
 use crate::exercise::*;
 use crate::db::DB;
 
@@ -64,10 +63,10 @@ pub fn parse_cli_args(exer: &mut ExerciseCheck, db_ref: &mut DB) -> Result<(), S
     }
 
     if let Some(decs) = matches.get_many::<usize>("declinazioni"){
-        let mut declinazioni = ([const {Declinazioni::Prima};4],0);
+        let mut declinazioni = ([const {DeclinazioneConiugazione::I};4],0);
         for &dec in decs{
-            if dec < usize::from(Declinazioni::__Count){
-                declinazioni.0[declinazioni.1] = Declinazioni::from(dec);
+            if dec < usize::from(DeclinazioneConiugazione::__Count){
+                declinazioni.0[declinazioni.1] = DeclinazioneConiugazione::from(dec);
                 declinazioni.1+=1;
             }
         }
@@ -75,10 +74,10 @@ pub fn parse_cli_args(exer: &mut ExerciseCheck, db_ref: &mut DB) -> Result<(), S
     }
 
     if let Some(cons) = matches.get_many::<usize>("coniugazioni"){
-        let mut coniugazioni = ([const {Coniugazione::I};4],0);
+        let mut coniugazioni = ([const {DeclinazioneConiugazione::I};4],0);
         for &con in cons{
             if con > 0 && con < usize::from(Declinazione::__Count){
-                coniugazioni.0[coniugazioni.1] = Coniugazione::from(con);
+                coniugazioni.0[coniugazioni.1] = DeclinazioneConiugazione::from(con);
                 coniugazioni.1+=1;
             }
         }

@@ -4,6 +4,7 @@ use std::fs::File;
 use std::path::Path;
 use rand::{rng, RngExt};
 
+use crate::common::DeclinazioneConiugazione;
 use crate::verbs;
 use crate::declinazione;
 
@@ -26,8 +27,8 @@ pub struct Verbs{
 
 #[derive(Default)]
 pub struct DB{
-    db_names: [Vec::<Name>; declinazione::Declinazioni::__Count as usize],
-    db_verbs: [Vec::<Verbs>; verbs::Coniugazione::__Count as usize],
+    db_names: [Vec::<Name>; DeclinazioneConiugazione::__Count as usize],
+    db_verbs: [Vec::<Verbs>; DeclinazioneConiugazione::__Count as usize],
 }
 
 #[derive(Clone, Copy, Default)]
@@ -238,7 +239,7 @@ impl DB{
         self.db_verbs[id.cat].get(id.idx)
     }
 
-    pub fn get_rand_verb_lat<'a>(&'a self, con: verbs::Coniugazione) -> (Id,verbs::Paradigma<'a>){
+    pub fn get_rand_verb_lat<'a>(&'a self, con: DeclinazioneConiugazione) -> (Id,verbs::Paradigma<'a>){
         if self.db_verbs.is_empty() {
             (Id::default(), verbs::Paradigma::default())
         }else{
@@ -257,7 +258,7 @@ impl DB{
 
     }
 
-    pub fn get_rand_name_lat<'a>(&'a self, dec: declinazione::Declinazioni) -> 
+    pub fn get_rand_name_lat<'a>(&'a self, dec: DeclinazioneConiugazione) -> 
         (Id, declinazione::Paradigma<'a>){
             if self.db_names.is_empty(){
                 (Id::default(),declinazione::Paradigma::default())
@@ -276,7 +277,7 @@ impl DB{
             }
         }
 
-    pub fn get_rand_verb_it(&self, con: verbs::Coniugazione) -> (Id, &str){
+    pub fn get_rand_verb_it(&self, con: DeclinazioneConiugazione) -> (Id, &str){
         if self.db_verbs.is_empty() {
             (Id::default(),"")
         }else{
@@ -291,7 +292,7 @@ impl DB{
         }
     }
 
-    pub fn get_rand_name_it(&self, dec: declinazione::Declinazioni) -> (Id, &str){
+    pub fn get_rand_name_it(&self, dec: DeclinazioneConiugazione) -> (Id, &str){
         if self.db_names.is_empty(){
             (Id::default(), "")
         }

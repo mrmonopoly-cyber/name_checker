@@ -4,17 +4,6 @@ use crate::common::Numero;
 
 #[derive(Debug, Clone, Copy)]
 #[allow(dead_code, nonstandard_style, clippy::enum_variant_names)]
-pub enum Declinazioni{
-    Prima,
-    Seconda,
-    Terza,
-    Quarta,
-
-    __Count
-}
-
-#[derive(Debug, Clone, Copy)]
-#[allow(dead_code, nonstandard_style, clippy::enum_variant_names)]
 pub enum Casi{
     Nominativo,
     Genitivo,
@@ -23,8 +12,7 @@ pub enum Casi{
     Vocativo,
     Ablativo,
 
-
-    __Num__Casi
+    __Count
 }
 
 #[allow(dead_code)]
@@ -85,7 +73,7 @@ impl<'b> Paradigma<'b>
     }
 }
 
-type Cases<'a> = [&'a str; Casi::__Num__Casi as usize];
+type Cases<'a> = [&'a str; Casi::__Count as usize];
 
 pub struct BasicDeclinazione<'a>{
      numero: [Cases<'a>;2],
@@ -115,12 +103,6 @@ const DECLINAZIONI : [BasicDeclinazione; 1] =
     },
 ];
 
-impl From<Declinazioni> for usize{
-    fn from(val: Declinazioni) -> Self {
-        val as usize
-    }
-}
-
 impl From<Casi> for usize {
     fn from(value: Casi) -> Self {
         value as Self
@@ -136,19 +118,6 @@ impl From<usize> for Casi {
             3 => Self::Accusativo,
             4 => Self::Vocativo,
             5 => Self::Ablativo,
-            _ => unreachable!(),
-        }
-    }
-}
-
-impl From<usize> for Declinazioni{
-    fn from(value: usize) -> Self {
-        match value {
-            1 => Self::Prima,
-            2 => Self::Seconda,
-            3 => Self::Terza,
-            4 => Self::Quarta,
-            5 => Self::__Count,
             _ => unreachable!(),
         }
     }
@@ -181,17 +150,4 @@ impl Display for DeclinazioneError{
             DeclinazioneError::Unknown => write!(f, "Unknown"),
         }
     }
-}
-
-impl Display for Declinazioni{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self{
-            Declinazioni::Prima => "Prima",
-            Declinazioni::Seconda=> "Seconda",
-            Declinazioni::Terza=> "Terza",
-            Declinazioni::Quarta=> "Quarta",
-            Declinazioni::__Count=> unreachable!(),
-        })
-    }
-    // add code here
 }

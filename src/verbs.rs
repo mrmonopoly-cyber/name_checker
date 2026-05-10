@@ -1,5 +1,5 @@
 use std::fmt::Display;
-use crate::common::Numero;
+use crate::common::{DeclinazioneConiugazione, Numero};
 
 #[derive(Clone, Copy)]
 pub enum Modo {
@@ -21,16 +21,6 @@ pub enum Tempo{
     Piucheperfetto,
     Futuro,
     FuturoAnteriore,
-
-    __Count
-}
-
-#[derive(Clone, Copy)]
-pub enum Coniugazione{
-    I,
-    II,
-    III,
-    IV,
 
     __Count
 }
@@ -128,7 +118,7 @@ impl<'a> Paradigma<'a>
 type Congiugazione<'a, const N: usize> = [&'a str; N];
 
 struct FormaVerbale<'a, const N: usize>{
-    coniugazioni: [Congiugazione<'a, N>; Coniugazione::__Count as usize],
+    coniugazioni: [Congiugazione<'a, N>; DeclinazioneConiugazione::__Count as usize],
 }
 
 trait InterfacciaVerbale {
@@ -449,27 +439,6 @@ impl Display for Paradigma<'_>{
             self.tempi[2],
             self.tempi[3],
             self.tempi[4])
-    }
-    // add code here
-}
-
-impl From<Coniugazione> for usize{
-    fn from(value: Coniugazione) -> Self {
-        value as Self
-    }
-}
-
-impl From<usize> for Coniugazione{
-    fn from(value: usize) -> Self {
-        match value {
-            1 => Coniugazione::I,
-            2 => Coniugazione::II,
-            3 => Coniugazione::III,
-            4 => Coniugazione::IV,
-            5 => Coniugazione::__Count,
-
-            _ => unreachable!()
-        }
     }
     // add code here
 }

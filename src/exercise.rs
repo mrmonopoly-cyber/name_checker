@@ -3,11 +3,11 @@ use rand::RngExt;
 use std::fmt::Display;
 
 use crate::db::Id;
-use crate::verbs::{Coniugazione, Modo, Persona, Tempo};
-use crate::{declinazione, verbs};
-use crate::declinazione::{Casi, Declinazioni, Paradigma};
+use crate::verbs::{Modo, Persona, Tempo};
+use crate::verbs;
+use crate::declinazione::{Casi, Paradigma};
 use crate::DB;
-use crate::common::Numero;
+use crate::common::{DeclinazioneConiugazione, Numero};
 
 pub const QUIT_COMMAND : &str = "QUIT";
 
@@ -38,8 +38,8 @@ pub enum Declinazione{
 #[derive(Clone, Copy)]
 pub enum Exercise{
     Lexical((Option<[LexicalType; 2]>, usize)),
-    DeclinaName((Option<[Declinazioni; 4]>, usize)),
-    ConiugaVerb((Option<[Coniugazione; 4]>, usize)),
+    DeclinaName((Option<[DeclinazioneConiugazione; 4]>, usize)),
+    ConiugaVerb((Option<[DeclinazioneConiugazione; 4]>, usize)),
 
     __Count
 }
@@ -98,28 +98,18 @@ impl<'a> ExerciseCheck<'a>{
         match self.checkable[q_type]{
             Exercise::Lexical((list, len)) => {
                 let l_type = list.unwrap()[rng.random_range(0..len)];
-                con_dec_to_ask = rng.random_range(0..4);
-                let _ = write!(buffer, "traduci ");
-                match dir_trad {
-                    DirectionTraduction::ItalianoLatino => {
-                        let _ = write!(buffer, "dall'italiano al latino ");
-                    },
-                    DirectionTraduction::LatinoItaliano => {
-                        let _ = write!(buffer, "dal latino all'italiano ");
-                    },
-                    DirectionTraduction::__Count => unreachable!(),
-                }
+                con_dec_to_ask = DeclinazioneConiugazione::from(rng.random_range(1..=4));
+                let _ = write!(buffer, "traduci {dir_trad}");
                 match l_type{
                     LexicalType::Names => {
-                        let dec = declinazione::Declinazioni::from(con_dec_to_ask + 1);
                         match dir_trad {
                             DirectionTraduction::ItalianoLatino => {
-                                let (idx, name) = db.get_rand_name_it(dec);
+                                let (idx, name) = db.get_rand_name_it(con_dec_to_ask);
                                 let _ = write!(buffer, "{}", name);
                                 question = Some(Question::NameMemoryIt(idx))
                             },
                             DirectionTraduction::LatinoItaliano => {
-                                let (idx, paradigma) = db.get_rand_name_lat(dec);
+                                let (idx, paradigma) = db.get_rand_name_lat(con_dec_to_ask);
                                 let _ = write!(buffer, "{}", paradigma);
                                 question = Some(Question::NameMemoryLat(idx))
                             },
@@ -127,15 +117,14 @@ impl<'a> ExerciseCheck<'a>{
                         }
                     }
                     LexicalType::Verbs => {
-                        let con = verbs::Coniugazione::from(con_dec_to_ask + 1);
                         match dir_trad {
                             DirectionTraduction::ItalianoLatino => {
-                                let (idx, verb) = db.get_rand_verb_it(con);
+                                let (idx, verb) = db.get_rand_verb_it(con_dec_to_ask);
                                 let _ = write!(buffer, "{}", verb);
                                 question = Some(Question::VerbMemoryIt(idx))
                             },
                             DirectionTraduction::LatinoItaliano => {
-                                let (idx, paradigma) = db.get_rand_verb_lat(con);
+                                let (idx, paradigma) = db.get_rand_verb_lat(con_dec_to_ask);
                                 let _ = write!(buffer, "{}", paradigma);
                                 question = Some(Question::VerbMemoryLat(idx))
                             },
@@ -152,7 +141,7 @@ impl<'a> ExerciseCheck<'a>{
                     Some(dec) => *dec,
                     None => unreachable!("{idx} >= {len}"),
                 };
-                let caso = Casi::from(rng.random_range(0..usize::from(Casi::__Num__Casi)));
+                let caso = Casi::from(rng.random_range(0..usize::from(Casi::__Count)));
                 let numero = Numero::from(rng.random_range(0..usize::from(Numero::__Num__Numero)));
                 let (idx,name) = db.get_rand_name_lat(dec_to_test);
 
@@ -415,6 +404,21 @@ impl Display for ExeRes{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "success: {}, failure: {}", self.sucess, self.failure)
     }
+}
+
+impl Display for DirectionTraduction{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self{
+            DirectionTraduction::ItalianoLatino => {
+                write!(f, "dall'italiano al latino ")
+            },
+            DirectionTraduction::LatinoItaliano => {
+                write!(f, "dal latino all'italiano ")
+            },
+            DirectionTraduction::__Count => unreachable!(),
+        }
+    }
+    // add code here
 }
 
 impl Default for Exercise{
