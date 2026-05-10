@@ -2,24 +2,27 @@ use std::fmt::Display;
 
 #[derive(Debug, Clone, Copy)]
 #[allow(dead_code, nonstandard_style, clippy::enum_variant_names)]
-pub enum Numero{
+pub enum Numero {
     Singolare,
     Plurale,
 
-    __Num__Numero
+    __Num__Numero,
 }
 
 #[derive(Clone, Copy)]
-pub enum DeclinazioneConiugazione{
+pub enum DeclinazioneConiugazione {
     I,
     II,
+    #[allow(clippy::upper_case_acronyms)]
     III,
     IV,
 
-    __Count
+    __Count,
 }
 
-impl From<Numero> for usize{
+pub trait GeneralPradigma: Display {}
+
+impl From<Numero> for usize {
     fn from(value: Numero) -> Self {
         value as usize
     }
@@ -31,12 +34,11 @@ impl From<usize> for Numero {
             0 => Numero::Singolare,
             1 => Numero::Plurale,
             _ => unreachable!(),
-            
         }
     }
 }
 
-impl Display for Numero{
+impl Display for Numero {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Numero::Singolare => write!(f, "Singolare"),
@@ -46,13 +48,13 @@ impl Display for Numero{
     }
 }
 
-impl From<DeclinazioneConiugazione> for usize{
+impl From<DeclinazioneConiugazione> for usize {
     fn from(value: DeclinazioneConiugazione) -> Self {
         value as Self
     }
 }
 
-impl From<usize> for DeclinazioneConiugazione{
+impl From<usize> for DeclinazioneConiugazione {
     fn from(value: usize) -> Self {
         match value {
             1 => DeclinazioneConiugazione::I,
@@ -61,21 +63,25 @@ impl From<usize> for DeclinazioneConiugazione{
             4 => DeclinazioneConiugazione::IV,
             5 => DeclinazioneConiugazione::__Count,
 
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
     // add code here
 }
 
-impl Display for DeclinazioneConiugazione{
+impl Display for DeclinazioneConiugazione {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self{
-            DeclinazioneConiugazione::I => "I",
-            DeclinazioneConiugazione::II => "II",
-            DeclinazioneConiugazione::III => "III",
-            DeclinazioneConiugazione::IV => "IV",
-            DeclinazioneConiugazione::__Count => unreachable!(),
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                DeclinazioneConiugazione::I => "I",
+                DeclinazioneConiugazione::II => "II",
+                DeclinazioneConiugazione::III => "III",
+                DeclinazioneConiugazione::IV => "IV",
+                DeclinazioneConiugazione::__Count => unreachable!(),
+            }
+        )
     }
     // add code here
 }

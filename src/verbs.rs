@@ -1,5 +1,5 @@
+use crate::common::{DeclinazioneConiugazione, GeneralPradigma, Numero};
 use std::fmt::Display;
-use crate::common::{DeclinazioneConiugazione, Numero};
 
 #[derive(Clone, Copy)]
 pub enum Modo {
@@ -9,12 +9,11 @@ pub enum Modo {
     Infinito,
 
     #[allow(nonstandard_style)]
-    __Modo_count
+    __Modo_count,
 }
 
-
-#[derive(Clone, Copy,PartialEq)]
-pub enum Tempo{
+#[derive(Clone, Copy, PartialEq)]
+pub enum Tempo {
     Presente,
     Imperfetto,
     Perfetto,
@@ -22,83 +21,90 @@ pub enum Tempo{
     Futuro,
     FuturoAnteriore,
 
-    __Count
+    __Count,
 }
 
 #[derive(Clone, Copy)]
-pub enum Persona{
+pub enum Persona {
     Prima,
     Seconda,
     Terza,
 
-    __Count
+    __Count,
 }
 
 #[allow(dead_code)]
-pub enum VerbsError{
+pub enum VerbsError {
     ConiugazioneNotFound,
     TempoNotFound,
-    ImpossibleRequest
+    ImpossibleRequest,
 }
-
 
 #[allow(dead_code)]
 #[derive(Default)]
-pub struct Paradigma<'a>{
-    tempi: [&'a str; 5],
+pub struct Paradigma {
+    tempi: [String; 5],
 }
 
 #[allow(dead_code)]
-impl<'a> Paradigma<'a>
-{
-    pub fn new(tempi: &'a [String; 5]) -> Self{
-        Self { tempi:[
-            &tempi[0],
-            &tempi[1],
-            &tempi[2],
-            &tempi[3],
-            &tempi[4],
-        ]}
+impl Paradigma {
+    pub fn new(tempi: [String; 5]) -> Self {
+        Self { tempi }
     }
-    pub fn get_coniugazione(&self) -> Result<usize, VerbsError>
-    {
-        let indic_presente_prima = self.tempi[0];
-        let indic_presente_seconda = self.tempi[1];
+
+    pub fn verb_list(& self) -> [&str; 5] {
+        let mut res = [""; 5];
+
+        for (idx, tempo) in self.tempi.iter().enumerate() {
+            res[idx] = tempo;
+        }
+
+        res
+    }
+
+    pub fn get_coniugazione(&self) -> Result<usize, VerbsError> {
+        let indic_presente_prima = &self.tempi[0];
+        let indic_presente_seconda = &self.tempi[1];
         let i_len_prima = indic_presente_prima.len();
         let i_len_seconda = indic_presente_seconda.len();
 
         let coniugazioni = &INDICATIVO.presente.coniugazioni;
 
-        for (idx,c) in coniugazioni.iter().enumerate(){
+        for (idx, c) in coniugazioni.iter().enumerate() {
             let suffix_pri_sing = c[0];
             let suffix_sec_sing = c[1];
             let mut valid = 0;
 
             let suffix = indic_presente_prima.get(i_len_prima - suffix_pri_sing.len()..);
-            if let Some(suffix) = suffix && suffix == suffix_pri_sing{
-                valid+=1;
+            if let Some(suffix) = suffix
+                && suffix == suffix_pri_sing
+            {
+                valid += 1;
             }
 
             let suffix = indic_presente_seconda.get(i_len_seconda - suffix_sec_sing.len()..);
 
-            if let Some(suffix) = suffix && suffix == suffix_sec_sing{
-                valid+=1;
+            if let Some(suffix) = suffix
+                && suffix == suffix_sec_sing
+            {
+                valid += 1;
             }
 
-            if valid == 2{
+            if valid == 2 {
                 return Ok(idx);
             }
-
         }
 
         Err(VerbsError::ConiugazioneNotFound)
     }
 
-
-
-    pub fn coniuga_verbo(&self, modo: Modo, tempo: Tempo, persona: Persona, numero: Numero)
-        -> Result<String, VerbsError>
-    {
+    pub fn coniuga_verbo(
+        &self,
+        modo: Modo,
+        tempo: Tempo,
+        persona: Persona,
+        numero: Numero,
+    ) -> Result<String, VerbsError> {
         let mut res = String::new();
 
         //TODO: add check irregular verbs
@@ -107,7 +113,7 @@ impl<'a> Paradigma<'a>
         let forma = FORME_VERBALI[usize::from(modo)];
         let suffix = forma.get_suffix_verb(coniugazione, tempo, persona, numero)?;
 
-        res.push_str(self.tempi[0]);
+        res.push_str(&self.tempi[0]);
         res.pop(); //INFO: remove the Indicativo presente suffix (one letter)
         res.push_str(suffix);
 
@@ -117,19 +123,23 @@ impl<'a> Paradigma<'a>
 
 type Congiugazione<'a, const N: usize> = [&'a str; N];
 
-struct FormaVerbale<'a, const N: usize>{
+struct FormaVerbale<'a, const N: usize> {
     coniugazioni: [Congiugazione<'a, N>; DeclinazioneConiugazione::__Count as usize],
 }
 
 trait InterfacciaVerbale {
-    fn get_suffix_verb<'a> (&self, coniugazione: usize,  tempo: Tempo, persona: Persona,
-        numero: Numero) -> Result<&'a str, VerbsError>;
+    fn get_suffix_verb<'a>(
+        &self,
+        coniugazione: usize,
+        tempo: Tempo,
+        persona: Persona,
+        numero: Numero,
+    ) -> Result<&'a str, VerbsError>;
 }
-
 
 type FormaVerbaleAttiva<'a> = FormaVerbale<'a, 6>;
 
-struct Indicativo<'a>{
+struct Indicativo<'a> {
     presente: FormaVerbaleAttiva<'a>,
     imperfetto: FormaVerbaleAttiva<'a>,
     futuro: FormaVerbaleAttiva<'a>,
@@ -140,7 +150,7 @@ struct Indicativo<'a>{
 }
 
 #[allow(dead_code)]
-struct Congiuntivo<'a>{
+struct Congiuntivo<'a> {
     presente: FormaVerbaleAttiva<'a>,
     imperfetto: FormaVerbaleAttiva<'a>,
 
@@ -148,13 +158,13 @@ struct Congiuntivo<'a>{
     piucheperfetto: FormaVerbaleAttiva<'a>,
 }
 
-struct Imperativo<'a>{
+struct Imperativo<'a> {
     presente: FormaVerbale<'a, 2>,
     futuro: FormaVerbale<'a, 4>,
 }
 
 #[allow(dead_code)]
-struct Infinito<'a>{
+struct Infinito<'a> {
     presente: FormaVerbale<'a, 1>,
     perfetto: FormaVerbale<'a, 1>,
     // futuro: FormaVerbale<'a, 1>, INFO: future is weird: not adding at the moment
@@ -162,13 +172,13 @@ struct Infinito<'a>{
 
 struct InvalidForma;
 
-const INDICATIVO : Indicativo = Indicativo{
+const INDICATIVO: Indicativo = Indicativo {
     presente: FormaVerbaleAttiva {
-        coniugazioni : [
+        coniugazioni: [
             ["o", "as", "at", "amus", "atis", "ant"],
             ["eo", "es", "et", "emus", "etis", "ent"],
             ["o", "is", "it", "imus", "itis", "unt"],
-            ["io", "is", "it", "imus", "itis", "iunt"]
+            ["io", "is", "it", "imus", "itis", "iunt"],
         ],
     },
     imperfetto: FormaVerbaleAttiva {
@@ -180,7 +190,7 @@ const INDICATIVO : Indicativo = Indicativo{
         ],
     },
     futuro: FormaVerbaleAttiva {
-        coniugazioni:[
+        coniugazioni: [
             ["abo", "abis", "abit", "abimus", "abitis", "abint"],
             ["ebo", "ebis", "ebit", "ebimus", "ebitis", "ebunt"],
             ["am", "es", "et", "emus", "etis", "ent"],
@@ -188,7 +198,7 @@ const INDICATIVO : Indicativo = Indicativo{
         ],
     },
     perfetto: FormaVerbaleAttiva {
-        coniugazioni:[
+        coniugazioni: [
             ["i", "isti", "it", "imus", "istis", "erunt"],
             ["i", "isti", "it", "imus", "istis", "erunt"],
             ["i", "isti", "it", "imus", "istis", "erunt"],
@@ -196,7 +206,7 @@ const INDICATIVO : Indicativo = Indicativo{
         ],
     },
     piucheperfetto: FormaVerbaleAttiva {
-        coniugazioni:[
+        coniugazioni: [
             ["eram", "eras", "erat", "eramus", "eratis", "erant"],
             ["eram", "eras", "erat", "eramus", "eratis", "erant"],
             ["eram", "eras", "erat", "eramus", "eratis", "erant"],
@@ -204,7 +214,7 @@ const INDICATIVO : Indicativo = Indicativo{
         ],
     },
     futuro_anteriore: FormaVerbaleAttiva {
-        coniugazioni:[
+        coniugazioni: [
             ["ero", "eris", "erit", "erimus", "eritis", "erint"],
             ["ero", "eris", "erit", "erimus", "eritis", "erint"],
             ["ero", "eris", "erit", "erimus", "eritis", "erint"],
@@ -213,79 +223,74 @@ const INDICATIVO : Indicativo = Indicativo{
     },
 };
 
-const IMPERATIVO : Imperativo = Imperativo{
+const IMPERATIVO: Imperativo = Imperativo {
     presente: FormaVerbale {
-        coniugazioni:[
-            ["a", "ate"],
-            ["e", "ete"],
-            ["e", "ite"],
-            ["i", "ite"]
-        ],
+        coniugazioni: [["a", "ate"], ["e", "ete"], ["e", "ite"], ["i", "ite"]],
     },
     futuro: FormaVerbale {
-        coniugazioni:[
-            ["ato", "ato", "atote","anto"],
+        coniugazioni: [
+            ["ato", "ato", "atote", "anto"],
             ["eto", "eto", "etote", "ento"],
-            ["ito","ito", "itate", "unto"],
-            ["ito","ito", "itote", "iunto"]
+            ["ito", "ito", "itate", "unto"],
+            ["ito", "ito", "itote", "iunto"],
         ],
     },
 };
 
-const NOT_IMPLEMENTED : InvalidForma = InvalidForma;
+const NOT_IMPLEMENTED: InvalidForma = InvalidForma;
 
 #[allow(dead_code)]
-const INFINITO: Infinito= Infinito{
-    presente: FormaVerbale { coniugazioni: [["are"], ["ere"], ["ere"], ["ire"]] },
-    perfetto: FormaVerbale { coniugazioni: [["isse"], ["isse"], ["isso"], ["isse"]]},
+const INFINITO: Infinito = Infinito {
+    presente: FormaVerbale {
+        coniugazioni: [["are"], ["ere"], ["ere"], ["ire"]],
+    },
+    perfetto: FormaVerbale {
+        coniugazioni: [["isse"], ["isse"], ["isso"], ["isse"]],
+    },
 };
 
-const FORME_VERBALI : [&dyn InterfacciaVerbale; Modo::__Modo_count as usize] = [
-    &INDICATIVO,
-    &NOT_IMPLEMENTED,
-    &NOT_IMPLEMENTED,
-    &IMPERATIVO,
-];
+const FORME_VERBALI: [&dyn InterfacciaVerbale; Modo::__Modo_count as usize] =
+    [&INDICATIVO, &NOT_IMPLEMENTED, &NOT_IMPLEMENTED, &IMPERATIVO];
 
-impl From<Tempo> for i32{
+impl From<Tempo> for i32 {
     fn from(value: Tempo) -> Self {
-        value as i32 
+        value as i32
     }
 }
 
-impl From<Persona> for usize{
+impl From<Persona> for usize {
     fn from(value: Persona) -> Self {
         value as usize
     }
 }
 
-impl From<Modo> for usize{
+impl From<Modo> for usize {
     fn from(value: Modo) -> Self {
         value as usize
     }
 }
 
-impl From<Tempo> for usize{
+impl From<Tempo> for usize {
     fn from(value: Tempo) -> Self {
         value as usize
     }
 }
 
-impl From<usize> for Modo{
+impl From<usize> for Modo {
     fn from(value: usize) -> Self {
-        match value{
+        match value {
             0 => Self::Indicativo,
             1 => Self::Congiuntivo,
             2 => Self::Imperativo,
             3 => Self::Infinito,
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
 }
 
-impl From<usize> for Tempo{
+impl From<usize> for Tempo {
     fn from(value: usize) -> Self {
-        match value{
+        match value {
             0 => Tempo::Presente,
             1 => Tempo::Imperfetto,
             2 => Tempo::Perfetto,
@@ -297,9 +302,9 @@ impl From<usize> for Tempo{
     }
 }
 
-impl From<usize> for Persona{
+impl From<usize> for Persona {
     fn from(value: usize) -> Self {
-        match value{
+        match value {
             0 => Persona::Prima,
             1 => Persona::Seconda,
             2 => Persona::Terza,
@@ -310,53 +315,69 @@ impl From<usize> for Persona{
     // add code here
 }
 
-impl Display for Modo{
+impl Display for Modo {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            Modo::Indicativo => "Indicativo",
-            Modo::Congiuntivo => "Congiuntivo",
-            Modo::Imperativo => "Imperativo",
-            Modo::Infinito => "Infinito",
-            Modo::__Modo_count => unreachable!(),
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                Modo::Indicativo => "Indicativo",
+                Modo::Congiuntivo => "Congiuntivo",
+                Modo::Imperativo => "Imperativo",
+                Modo::Infinito => "Infinito",
+                Modo::__Modo_count => unreachable!(),
+            }
+        )
     }
     // add code here
 }
 
-impl Display for Tempo{
+impl Display for Tempo {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            Tempo::Presente => "Presente",
-            Tempo::Imperfetto => "Imperfetto",
-            Tempo::Perfetto => "Perfetto",
-            Tempo::Piucheperfetto => "Piucheperfetto",
-            Tempo::Futuro => "Futuro",
-            Tempo::FuturoAnteriore => "FuturoAnteriore",
-            Tempo::__Count => unreachable!(),
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                Tempo::Presente => "Presente",
+                Tempo::Imperfetto => "Imperfetto",
+                Tempo::Perfetto => "Perfetto",
+                Tempo::Piucheperfetto => "Piucheperfetto",
+                Tempo::Futuro => "Futuro",
+                Tempo::FuturoAnteriore => "FuturoAnteriore",
+                Tempo::__Count => unreachable!(),
+            }
+        )
     }
     // add code here
 }
 
-impl Display for Persona{
+impl Display for Persona {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            Persona::Prima => "Prima",
-            Persona::Seconda => "Seconda",
-            Persona::Terza => "Terza",
-            Persona::__Count => unreachable!(),
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                Persona::Prima => "Prima",
+                Persona::Seconda => "Seconda",
+                Persona::Terza => "Terza",
+                Persona::__Count => unreachable!(),
+            }
+        )
     }
     // add code here
 }
 
-impl Display for VerbsError{
+impl Display for VerbsError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            VerbsError::ConiugazioneNotFound => "ConiugazioneNotFound",
-            VerbsError::TempoNotFound => "TempoNotFound",
-            VerbsError::ImpossibleRequest => "ImpossibleRequest",
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                VerbsError::ConiugazioneNotFound => "ConiugazioneNotFound",
+                VerbsError::TempoNotFound => "TempoNotFound",
+                VerbsError::ImpossibleRequest => "ImpossibleRequest",
+            }
+        )
     }
     // add code here
 }
@@ -365,26 +386,28 @@ fn check_coniugazione<'b, const N: usize>(
     tempo_ref: &FormaVerbale<'b, N>,
     coniugazione: usize,
     persona: Persona,
-    numero: Numero)
--> Result<&'b str, VerbsError>
-{
+    numero: Numero,
+) -> Result<&'b str, VerbsError> {
     let idx = usize::from(persona) * 3 + usize::from(numero);
     if coniugazione >= tempo_ref.coniugazioni.len() {
-        return Err(VerbsError::ConiugazioneNotFound)
+        return Err(VerbsError::ConiugazioneNotFound);
     }
     let coniugazione = &tempo_ref.coniugazioni[coniugazione];
 
-    if idx >= coniugazione.len()
-    {
-        return Err(VerbsError::ConiugazioneNotFound)
+    if idx >= coniugazione.len() {
+        return Err(VerbsError::ConiugazioneNotFound);
     }
     Ok(coniugazione[idx])
 }
 
-impl InterfacciaVerbale for Indicativo<'_>{
-    fn get_suffix_verb<'a> (&self, coniugazione: usize, tempo: Tempo, persona: Persona,
-        numero: Numero) -> Result<&'a str, VerbsError>
-    {
+impl InterfacciaVerbale for Indicativo<'_> {
+    fn get_suffix_verb<'a>(
+        &self,
+        coniugazione: usize,
+        tempo: Tempo,
+        persona: Persona,
+        numero: Numero,
+    ) -> Result<&'a str, VerbsError> {
         let tempo_ref = match tempo {
             Tempo::Presente => &INDICATIVO.presente,
             Tempo::Imperfetto => &INDICATIVO.imperfetto,
@@ -399,46 +422,67 @@ impl InterfacciaVerbale for Indicativo<'_>{
     }
 }
 
-impl InterfacciaVerbale for Imperativo<'_>{
-    fn get_suffix_verb<'a> (&self, coniugazione: usize, tempo: Tempo, persona: Persona,
-        numero: Numero) -> Result<&'a str, VerbsError>
-    {
+impl InterfacciaVerbale for Imperativo<'_> {
+    fn get_suffix_verb<'a>(
+        &self,
+        coniugazione: usize,
+        tempo: Tempo,
+        persona: Persona,
+        numero: Numero,
+    ) -> Result<&'a str, VerbsError> {
         match tempo {
-            Tempo::Presente =>check_coniugazione(&IMPERATIVO.presente, coniugazione, persona, numero),
-            Tempo::Futuro =>check_coniugazione(&IMPERATIVO.futuro, coniugazione, persona, numero),
+            Tempo::Presente => {
+                check_coniugazione(&IMPERATIVO.presente, coniugazione, persona, numero)
+            }
+            Tempo::Futuro => check_coniugazione(&IMPERATIVO.futuro, coniugazione, persona, numero),
             _ => Err(VerbsError::TempoNotFound),
         }
     }
 }
 
-impl InterfacciaVerbale for Infinito<'_>{
-    fn get_suffix_verb<'a> (&self, coniugazione: usize, tempo: Tempo, persona: Persona,
-        numero: Numero) -> Result<&'a str, VerbsError>
-    {
+impl InterfacciaVerbale for Infinito<'_> {
+    fn get_suffix_verb<'a>(
+        &self,
+        coniugazione: usize,
+        tempo: Tempo,
+        persona: Persona,
+        numero: Numero,
+    ) -> Result<&'a str, VerbsError> {
         match tempo {
-            Tempo::Presente =>check_coniugazione(&INFINITO.presente, coniugazione, persona, numero),
-            Tempo::Perfetto=>check_coniugazione(&INFINITO.perfetto, coniugazione, persona, numero),
+            Tempo::Presente => {
+                check_coniugazione(&INFINITO.presente, coniugazione, persona, numero)
+            }
+            Tempo::Perfetto => {
+                check_coniugazione(&INFINITO.perfetto, coniugazione, persona, numero)
+            }
             _ => Err(VerbsError::TempoNotFound),
         }
     }
 }
 
-impl InterfacciaVerbale for InvalidForma{
-    fn get_suffix_verb<'a> (&self, _coniugazione: usize, _tempo: Tempo, _persona: Persona,
-        _numero: Numero) -> Result<&'a str, VerbsError>
-    {
+impl InterfacciaVerbale for InvalidForma {
+    fn get_suffix_verb<'a>(
+        &self,
+        _coniugazione: usize,
+        _tempo: Tempo,
+        _persona: Persona,
+        _numero: Numero,
+    ) -> Result<&'a str, VerbsError> {
         Err(VerbsError::ImpossibleRequest)
     }
 }
 
-impl Display for Paradigma<'_>{
+impl Display for Paradigma {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{},{},{},{},{}",
-            self.tempi[0],
-            self.tempi[1],
-            self.tempi[2],
-            self.tempi[3],
-            self.tempi[4])
+        write!(
+            f,
+            "{},{},{},{},{}",
+            self.tempi[0], self.tempi[1], self.tempi[2], self.tempi[3], self.tempi[4]
+        )
     }
+    // add code here
+}
+
+impl GeneralPradigma for Paradigma {
     // add code here
 }
