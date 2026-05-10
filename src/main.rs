@@ -54,7 +54,7 @@ fn main() {
 
     if exercise.num_exercise() != 0 {
         while RUNNING.load(Ordering::Relaxed) {
-            if let Err(e) = exercise.question(&mut user_input){
+            if let Err(e) = exercise.question(&mut user_input) {
                 println!("error in generatin question: {e}");
                 continue;
             }

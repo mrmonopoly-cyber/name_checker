@@ -9,7 +9,7 @@ pub enum Numero {
     __Num__Numero,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum DeclinazioneConiugazione {
     I,
     II,

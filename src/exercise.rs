@@ -10,7 +10,6 @@ use crate::verbs::{Modo, Persona, Tempo};
 
 pub const QUIT_COMMAND: &str = "QUIT";
 
-
 enum DirectionTraduction {
     ItalianoLatino,
     LatinoItaliano,
@@ -20,28 +19,57 @@ enum DirectionTraduction {
 
 pub enum QuestionError {
     NoDB,
-    NoData(SectionCategory),
-    InvalidExercise,
+    NoData(Exercise),
 }
 
 #[derive(Clone, Copy)]
-#[allow(clippy::upper_case_acronyms)]
-pub enum Declinazione {
-    I,
-    II,
-    III,
-    IV,
+pub struct ConDecListToTest {
+    pool: [DeclinazioneConiugazione; 4],
+    len: usize,
+}
+
+impl ConDecListToTest {
+    pub fn add_dec_con(&mut self, dec_con: DeclinazioneConiugazione) {
+        for idx in 0..self.len {
+            if self.pool[idx] == dec_con {
+                return;
+            }
+        }
+
+        self.pool[self.len] = dec_con;
+        self.len += 1;
+    }
+
+    pub fn is_active(&self) -> bool {
+        self.len > 0
+    }
+
+    pub fn clear(&mut self) {
+        self.len = 0;
+        self.pool = [DeclinazioneConiugazione::I;4];
+    }
+}
+
+#[derive(Clone, Copy)]
+pub enum ExerciseType {
+    LexicalName,
+    LexicalVerb,
+    DeclinaName,
+    ConiugaVerb,
 
     __Count,
 }
 
 #[derive(Clone, Copy)]
-pub enum Exercise {
-    Lexical((Option<[SectionCategory; 2]>, usize)),
-    DeclinaName((Option<[DeclinazioneConiugazione; 4]>, usize)),
-    ConiugaVerb((Option<[DeclinazioneConiugazione; 4]>, usize)),
+pub struct Exercise {
+    t: ExerciseType,
+    decs: ConDecListToTest,
+}
 
-    __Count,
+impl Exercise {
+    pub fn new(t: ExerciseType, decs: ConDecListToTest) -> Self {
+        Self { t, decs }
+    }
 }
 
 enum Question {
@@ -66,7 +94,7 @@ impl<'a> ExerciseCheck<'a> {
     }
 
     pub fn add_exercise(&mut self, exercise: Exercise) {
-        if self.amount_to_check < usize::from(Exercise::__Count) {
+        if self.amount_to_check < usize::from(ExerciseType::__Count) {
             self.checkable[self.amount_to_check] = exercise;
             self.amount_to_check += 1;
         }
@@ -76,23 +104,37 @@ impl<'a> ExerciseCheck<'a> {
         self.amount_to_check
     }
 
-    pub fn question(&mut self, buffer: &mut String) -> Result<(), QuestionError>{
+    fn lexical_question(
+        &mut self,
+        decs: &ConDecListToTest,
+        buffer: &mut String,
+        cat: SectionCategory,
+        dir_trad: DirectionTraduction,
+    ) -> Option<Question> {
+        let mut rng = rand::rng();
+        let l_type = decs.pool[rng.random_range(0..decs.len)];
+        let db = self.db.unwrap();
 
-        fn get_verb_name_dec_con<'a>(
-            len: usize,
-            list: &'a[DeclinazioneConiugazione],
-            db: &'a DB,
-            cat: SectionCategory) -> Result<(Id, &'a str), QuestionError>
-        {
-            match db.get_rand_it_with_dec_list(cat, list, len){
-                Some(pair) => Ok(pair),
-                None => Err(QuestionError::NoData(cat)),
+        let _ = write!(buffer, "traduci {dir_trad}");
+
+        match dir_trad {
+            DirectionTraduction::ItalianoLatino => {
+                let (idx, it) = db.get_rand_it(cat, l_type)?;
+                let _ = write!(buffer, "{}", it);
+                Some(Question::LexicalIt(SectionCategory::Names, idx))
             }
+            DirectionTraduction::LatinoItaliano => {
+                let (idx, paradigma) = db.get_rand_lat(cat, l_type)?;
+                let _ = write!(buffer, "{}", paradigma);
+                Some(Question::LexicalLat(cat, idx))
+            }
+            DirectionTraduction::__Count => unreachable!(),
         }
+    }
 
+    pub fn question(&mut self, buffer: &mut String) -> Result<(), QuestionError> {
         let mut rng = rand::rng();
         let q_type = rng.random_range(0..self.amount_to_check);
-        let question;
         let dir_trad =
             DirectionTraduction::from(rng.random_range(0..DirectionTraduction::__Count as usize));
         buffer.clear();
@@ -104,69 +146,62 @@ impl<'a> ExerciseCheck<'a> {
             }
         };
 
-        match self.checkable[q_type] {
-            Exercise::Lexical((list, len)) => {
-                let l_type = list.unwrap()[rng.random_range(0..len)];
-                let _ = write!(buffer, "traduci {dir_trad}");
-                match dir_trad {
-                    DirectionTraduction::ItalianoLatino => {
-                        let (idx, it);
-                            loop {
-                                let dec_con = DeclinazioneConiugazione::from(rng.random_range(1..=4));
-                                if let Some(name) = db.get_rand_it(l_type, dec_con) {
-                                    (idx, it) = name;
-                                    break;
-                                }
-                            }
+        println!("q_type: {}",q_type);
+        let exer = self.checkable[q_type];
+        let decs = &exer.decs;
 
-                        let _ = write!(buffer, "{}", it);
-                        question = Some(Question::LexicalIt(l_type, idx))
-                    }
-                    DirectionTraduction::LatinoItaliano => {
-                        let (idx, paradigma);
-                        loop {
-                            let dec_con = DeclinazioneConiugazione::from(rng.random_range(1..=4));
-                            if let Some(name) = db.get_rand_lat(l_type, dec_con) {
-                                (idx, paradigma) = name;
-                                break;
-                            }
-                        }
+        if !exer.decs.is_active() {
+            return Err(QuestionError::NoData(exer));
+        }
 
-                        let _ = write!(buffer, "{}", paradigma);
-                        question = Some(Question::LexicalLat(l_type, idx))
-                    }
-                    DirectionTraduction::__Count => unreachable!(),
+        self.q_type = match exer.t {
+            ExerciseType::LexicalName => {
+                match self.lexical_question(decs, buffer, SectionCategory::Names, dir_trad){
+                    Some(q) => Some(q),
+                    None => return Err(QuestionError::NoData(exer)),
                 }
-                let _ = write!(buffer, ": ");
             }
-            Exercise::DeclinaName((Some(list), len)) => {
-                let (idx, name) = get_verb_name_dec_con(len, &list, db, SectionCategory::Names)?;
+            ExerciseType::LexicalVerb => {
+                match self.lexical_question(decs, buffer, SectionCategory::Names, dir_trad){
+                    Some(q) => Some(q),
+                    None => return Err(QuestionError::NoData(exer)),
+                }
+            }
+            ExerciseType::DeclinaName => {
+                let len = decs.len;
+                let list = &decs.pool;
+                let cat = SectionCategory::Names;
+
+                let (idx, name) = match db.get_rand_it_with_dec_list(cat, list, len) {
+                    Some(pair) => pair,
+                    None => return Err(QuestionError::NoData(exer)),
+                };
                 let caso = Casi::from(rng.random_range(0..usize::from(Casi::__Count)));
                 let numero = Numero::from(rng.random_range(0..usize::from(Numero::__Num__Numero)));
 
                 let _ = write!(buffer, "dimmi il {caso} {numero} di {name}: ");
-                question = Some(Question::NameDecLat(idx, caso, numero));
+                Some(Question::NameDecLat(idx, caso, numero))
             }
-            Exercise::ConiugaVerb((Some(list), len)) => {
-                let (idx, verb) = get_verb_name_dec_con(len, &list, db, SectionCategory::Verbs)?;
+            ExerciseType::ConiugaVerb => {
+                let len = decs.len;
+                let list = &decs.pool;
+                let cat = SectionCategory::Verbs;
+
+                let (idx, verb) = match db.get_rand_it_with_dec_list(cat, list, len) {
+                    Some(pair) => pair,
+                    None => return Err(QuestionError::NoData(exer)),
+                };
                 let modo = Modo::from(rng.random_range(0..usize::from(Modo::__Modo_count)));
                 let tempo = Tempo::from(rng.random_range(0..usize::from(Tempo::__Count)));
                 let persona = Persona::from(rng.random_range(0..usize::from(Persona::__Count)));
                 let numero = Numero::from(rng.random_range(0..usize::from(Numero::__Num__Numero)));
 
+                let _ = write!(buffer,"dimmi il {modo} {tempo} {persona} {numero} di {verb}: ");
 
-                let _ = write!(
-                    buffer,
-                    "dimmi il {modo} {tempo} {persona} {numero} di {verb}: "
-                );
-
-                question = Some(Question::VerbDecLat(idx, modo, tempo, persona, numero));
+                Some(Question::VerbDecLat(idx, modo, tempo, persona, numero))
             }
-            Exercise::__Count => unreachable!(),
-            _ => return Err(QuestionError::InvalidExercise),
-        }
-
-        self.q_type = question;
+            ExerciseType::__Count => unreachable!(),
+        };
 
         Ok(())
     }
@@ -218,23 +253,22 @@ impl<'a> ExerciseCheck<'a> {
                                 let nominativo = split.next();
                                 let genitivo = split.next();
                                 let latin = name.latin();
+                                let name_nominativo = latin.nominativo();
+                                let name_genitivo = latin.genitivo();
 
                                 match (nominativo, genitivo) {
-                                    (Some(nominativo), Some(genitivo)) => {
-                                        match nominativo == latin.nominativo()
-                                            && genitivo == latin.genitivo()
+                                    (Some(nominativo), Some(genitivo)) => 
+                                    {
+                                        match nominativo == name_nominativo
+                                            && genitivo == name_genitivo
                                         {
                                             true => good_job(),
                                             false => incorrect_answer(
                                                 &format!("{},{}", nominativo, genitivo),
-                                                &format!(
-                                                    "{},{}",
-                                                    latin.nominativo(),
-                                                    latin.genitivo()
-                                                ),
+                                                &format!("{},{}", name_nominativo, name_genitivo),
                                             ),
                                         }
-                                    }
+                                    },
                                     _ => missing_input(),
                                 }
                             } else {
@@ -270,9 +304,9 @@ impl<'a> ExerciseCheck<'a> {
                                         );
                                     }
                                 }
-
                                 good_job()
-                            } else {
+                            }
+                            else {
                                 false
                             }
                         }
@@ -346,21 +380,15 @@ impl ExeRes {
     }
 }
 
-impl From<Exercise> for usize {
-    fn from(value: Exercise) -> Self {
+impl From<ExerciseType> for usize {
+    fn from(value: ExerciseType) -> Self {
         match value {
-            Exercise::Lexical(_) => 0,
-            Exercise::DeclinaName(_) => 1,
-            Exercise::ConiugaVerb(_) => 2,
-            Exercise::__Count => 3,
+            ExerciseType::LexicalName => 0,
+            ExerciseType::LexicalVerb => 1,
+            ExerciseType::DeclinaName => 2,
+            ExerciseType::ConiugaVerb => 3,
+            ExerciseType::__Count => 4,
         }
-    }
-    // add code here
-}
-
-impl From<Declinazione> for usize {
-    fn from(value: Declinazione) -> Self {
-        value as Self
     }
     // add code here
 }
@@ -404,12 +432,38 @@ impl Display for DirectionTraduction {
     // add code here
 }
 
-impl Display for QuestionError{
+impl Display for ExerciseType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                ExerciseType::LexicalName => "lexical name",
+                ExerciseType::LexicalVerb => "lexical verb",
+                ExerciseType::DeclinaName => "declina name",
+                ExerciseType::ConiugaVerb => "coniuga verb",
+                ExerciseType::__Count => todo!(),
+            }
+        )
+    }
+    // add code here
+}
+
+impl Display for QuestionError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             QuestionError::NoDB => write!(f, "no db"),
-            QuestionError::NoData(section_category) => write!(f, "no data for {section_category}"),
-            QuestionError::InvalidExercise => write!(f, "invalid exercise"),
+            QuestionError::NoData(exer) => write!(f, "no data for {}", exer.t),
+        }
+    }
+    // add code here
+}
+
+impl Default for ConDecListToTest {
+    fn default() -> Self {
+        Self {
+            pool: [DeclinazioneConiugazione::I; 4],
+            len: 0,
         }
     }
     // add code here
@@ -417,7 +471,10 @@ impl Display for QuestionError{
 
 impl Default for Exercise {
     fn default() -> Self {
-        Self::Lexical((None, 0))
+        Self {
+            t: ExerciseType::LexicalName,
+            decs: ConDecListToTest::default(),
+        }
     }
     // add code here
 }

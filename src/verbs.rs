@@ -52,7 +52,7 @@ impl Paradigma {
         Self { tempi }
     }
 
-    pub fn verb_list(& self) -> [&str; 5] {
+    pub fn verb_list(&self) -> [&str; 5] {
         let mut res = [""; 5];
 
         for (idx, tempo) in self.tempi.iter().enumerate() {

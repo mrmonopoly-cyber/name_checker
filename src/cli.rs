@@ -1,5 +1,5 @@
 use crate::common::DeclinazioneConiugazione;
-use crate::db::{DB, SectionCategory};
+use crate::db::DB;
 use crate::exercise::*;
 use clap::{Arg, ArgAction, Command, value_parser};
 
@@ -12,14 +12,18 @@ pub fn parse_cli_args(exer: &mut ExerciseCheck, db_ref: &mut DB) -> Result<(), S
             Arg::new("verbs")
                 .short('v')
                 .long("verbs")
-                .action(ArgAction::SetTrue)
+                .value_name("CONJ")
+                .num_args(1..=4)
+                .value_parser(value_parser!(usize))
                 .help("lexical test for verbs"),
         )
         .arg(
             Arg::new("names")
                 .short('n')
                 .long("names")
-                .action(ArgAction::SetTrue)
+                .value_name("DECL")
+                .num_args(1..=4)
+                .value_parser(value_parser!(usize))
                 .help("lexical test for names"),
         )
         .arg(
@@ -51,48 +55,37 @@ pub fn parse_cli_args(exer: &mut ExerciseCheck, db_ref: &mut DB) -> Result<(), S
         );
 
     let matches = command.get_matches();
-    let mut lexical = ([const { SectionCategory::Verbs }; 2], 0);
+    let mut dec_cons_exec = ConDecListToTest::default();
 
-    if matches.get_flag("verbs") {
-        lexical.0[lexical.1] = SectionCategory::Verbs;
-        lexical.1 += 1;
-    }
-
-    if matches.get_flag("names") {
-        lexical.0[lexical.1] = SectionCategory::Names;
-        lexical.1 += 1;
-    }
-
-    if lexical.1 > 0 {
-        exer.add_exercise(Exercise::Lexical((Some(lexical.0), lexical.1)));
-    }
-
-    if let Some(decs) = matches.get_many::<usize>("declinazioni") {
-        let mut declinazioni = ([const { DeclinazioneConiugazione::I }; 4], 0);
-        for &dec in decs {
-            if dec < usize::from(DeclinazioneConiugazione::__Count) {
-                declinazioni.0[declinazioni.1] = DeclinazioneConiugazione::from(dec);
-                declinazioni.1 += 1;
+    pub fn check_field(
+        matches: &clap::ArgMatches,
+        dec_cons_exec: &mut ConDecListToTest,
+        field: &str,
+    ) -> bool {
+        dec_cons_exec.clear();
+        if let Some(decs) = matches.get_many::<usize>(field) {
+            for &decs in decs {
+                if decs > 0 && decs < usize::from(DeclinazioneConiugazione::__Count) {
+                    dec_cons_exec.add_dec_con(DeclinazioneConiugazione::from(decs));
+                }
             }
         }
-        exer.add_exercise(Exercise::DeclinaName((
-            Some(declinazioni.0),
-            declinazioni.1,
-        )));
+        dec_cons_exec.is_active()
+    }
+    if check_field(&matches, &mut dec_cons_exec, "names") {
+        exer.add_exercise(Exercise::new(ExerciseType::LexicalName, dec_cons_exec));
     }
 
-    if let Some(cons) = matches.get_many::<usize>("coniugazioni") {
-        let mut coniugazioni = ([const { DeclinazioneConiugazione::I }; 4], 0);
-        for &con in cons {
-            if con > 0 && con < usize::from(Declinazione::__Count) {
-                coniugazioni.0[coniugazioni.1] = DeclinazioneConiugazione::from(con);
-                coniugazioni.1 += 1;
-            }
-        }
-        exer.add_exercise(Exercise::ConiugaVerb((
-            Some(coniugazioni.0),
-            coniugazioni.1,
-        )));
+    if check_field(&matches, &mut dec_cons_exec, "verbs") {
+        exer.add_exercise(Exercise::new(ExerciseType::LexicalVerb, dec_cons_exec));
+    }
+
+    if check_field(&matches, &mut dec_cons_exec, "declinazioni") {
+        exer.add_exercise(Exercise::new(ExerciseType::DeclinaName, dec_cons_exec));
+    }
+
+    if check_field(&matches, &mut dec_cons_exec, "coniugazioni") {
+        exer.add_exercise(Exercise::new(ExerciseType::ConiugaVerb, dec_cons_exec));
     }
 
     let db = match matches.get_one::<String>("db_file") {

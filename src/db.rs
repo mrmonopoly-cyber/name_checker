@@ -303,21 +303,20 @@ impl DB {
         }
     }
 
-        pub fn get_rand_it_with_dec_list(
-            &self,
-            cat: SectionCategory,
-            list: &[DeclinazioneConiugazione],
-            len: usize,
-            ) -> Option<(Id, &str)>
-        {
-            let mut rng = rand::rng();
-            let idx = rng.random_range(0..len);
-            let dec_to_test = match list.get(idx) {
-                Some(dec) => *dec,
-                None => unreachable!("{idx} >= {}", list.len()),
-            };
-            self.get_rand_it(cat, dec_to_test)
-        }
+    pub fn get_rand_it_with_dec_list(
+        &self,
+        cat: SectionCategory,
+        list: &[DeclinazioneConiugazione],
+        len: usize,
+    ) -> Option<(Id, &str)> {
+        let mut rng = rand::rng();
+        let idx = rng.random_range(0..len);
+        let dec_to_test = match list.get(idx) {
+            Some(dec) => *dec,
+            None => unreachable!("{idx} >= {}", list.len()),
+        };
+        self.get_rand_it(cat, dec_to_test)
+    }
 
     pub fn get_rand_it(
         &self,
@@ -375,13 +374,17 @@ impl Display for DBError {
     // add code here
 }
 
-impl Display for SectionCategory{
+impl Display for SectionCategory {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            SectionCategory::Names => "names",
-            SectionCategory::Verbs => "verbs",
-            SectionCategory::None => "none",
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                SectionCategory::Names => "names",
+                SectionCategory::Verbs => "verbs",
+                SectionCategory::None => "none",
+            }
+        )
     }
     // add code here
 }
