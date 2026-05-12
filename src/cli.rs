@@ -45,6 +45,12 @@ pub fn parse_cli_args(exer: &mut ExerciseCheck, db_ref: &mut DB) -> Result<(), S
                 .help("test for coniugazioni"),
         )
         .arg(
+            Arg::new("all")
+            .long("all")
+            .action(ArgAction::SetTrue)
+            .help("ask all possible question")
+        )
+        .arg(
             Arg::new("db_file")
                 .long("db_file")
                 .required(false)
@@ -72,6 +78,28 @@ pub fn parse_cli_args(exer: &mut ExerciseCheck, db_ref: &mut DB) -> Result<(), S
         }
         dec_cons_exec.is_active()
     }
+    let db = match matches.get_one::<String>("db_file") {
+        Some(path) => db_ref.init(path),
+        None => db_ref.init(DEFAULT_DB_PATH),
+    };
+
+    if let Err(e) = db {
+        return Err(format!("error init db: {e}"));
+    }
+
+    if let Some(true) = matches.get_one::<bool>("all"){
+        dec_cons_exec.add_dec_con(DeclinazioneConiugazione::I);
+        dec_cons_exec.add_dec_con(DeclinazioneConiugazione::II);
+        dec_cons_exec.add_dec_con(DeclinazioneConiugazione::III);
+        dec_cons_exec.add_dec_con(DeclinazioneConiugazione::IV);
+
+        exer.add_exercise(Exercise::new(ExerciseType::LexicalName, dec_cons_exec));
+        exer.add_exercise(Exercise::new(ExerciseType::LexicalVerb, dec_cons_exec));
+        exer.add_exercise(Exercise::new(ExerciseType::DeclinaName, dec_cons_exec));
+        exer.add_exercise(Exercise::new(ExerciseType::ConiugaVerb, dec_cons_exec));
+        return Ok(());
+    }
+
     if check_field(&matches, &mut dec_cons_exec, "names") {
         exer.add_exercise(Exercise::new(ExerciseType::LexicalName, dec_cons_exec));
     }
@@ -88,14 +116,6 @@ pub fn parse_cli_args(exer: &mut ExerciseCheck, db_ref: &mut DB) -> Result<(), S
         exer.add_exercise(Exercise::new(ExerciseType::ConiugaVerb, dec_cons_exec));
     }
 
-    let db = match matches.get_one::<String>("db_file") {
-        Some(path) => db_ref.init(path),
-        None => db_ref.init(DEFAULT_DB_PATH),
-    };
-
-    if let Err(e) = db {
-        return Err(format!("error init db: {e}"));
-    }
 
     Ok(())
 }

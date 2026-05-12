@@ -171,7 +171,7 @@ impl<'a> ExerciseCheck<'a> {
                 let list = &decs.pool;
                 let cat = SectionCategory::Names;
 
-                let (idx, name) = match db.get_rand_it_with_dec_list(cat, list, len) {
+                let (idx, name) = match db.get_rand_lat_with_dec_list(cat, list, len) {
                     Some(pair) => pair,
                     None => return Err(QuestionError::NoData(exer)),
                 };
@@ -186,7 +186,7 @@ impl<'a> ExerciseCheck<'a> {
                 let list = &decs.pool;
                 let cat = SectionCategory::Verbs;
 
-                let (idx, verb) = match db.get_rand_it_with_dec_list(cat, list, len) {
+                let (idx, verb) = match db.get_rand_lat_with_dec_list(cat, list, len) {
                     Some(pair) => pair,
                     None => return Err(QuestionError::NoData(exer)),
                 };
